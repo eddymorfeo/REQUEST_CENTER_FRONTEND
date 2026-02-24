@@ -3,28 +3,24 @@
 import * as React from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useRequestsData } from "@/hooks/requests/useRequestsData";
-import { useAuth } from "@/hooks/auth/useAuth";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { RefreshCw } from "lucide-react";
+import { PlusIcon, RefreshCw } from "lucide-react";
+
 import { RequestsSkeleton } from "./requests-skeleton";
 import { RequestsBoardView } from "./views/requests-board-view";
 import { RequestsListView } from "./views/requests-list-view";
+import { useAuth } from "@/hooks/auth/useAuth";
 
 export function RequestsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user } = useAuth();
 
   const view = (searchParams.get("view") ?? "board") as "board" | "list";
   const { isLoading, statuses, requests, refresh } = useRequestsData();
 
-  // ✅ state local para optimistic updates
-  const [localRequests, setLocalRequests] = React.useState(requests);
-
-  React.useEffect(() => {
-    setLocalRequests(requests);
-  }, [requests]);
+  const { user } = useAuth();
+  const isAdmin = user?.roleCode === "ADMIN";
 
   const setView = (next: "board" | "list") => {
     const url = new URL(window.location.href);
@@ -44,10 +40,24 @@ export function RequestsPage() {
           </p>
         </div>
 
-        <Button variant="outline" onClick={refresh} className="gap-2">
-          <RefreshCw className="size-4" />
-          Actualizar
-        </Button>
+        <div className="flex items-center gap-2">
+          {isAdmin ? (
+            <Button
+              variant="outline"
+              onClick={() => router.push("/requests/new")}
+              className="gap-2"
+            >
+              <PlusIcon className="size-4" />
+              Crear Solicitud
+            </Button>
+          ) : null}
+
+          <Button variant="outline" onClick={refresh} className="gap-2">
+            <RefreshCw className="size-4" />
+            Actualizar
+          </Button>
+        </div>
+
       </div>
 
       <Tabs value={view} onValueChange={(v) => setView(v as any)}>
@@ -57,16 +67,11 @@ export function RequestsPage() {
         </TabsList>
 
         <TabsContent value="board" className="mt-4">
-          <RequestsBoardView
-            statuses={statuses}
-            requests={localRequests}
-            currentUser={user}
-            onRequestsChange={setLocalRequests}
-          />
+          <RequestsBoardView statuses={statuses} requests={requests} />
         </TabsContent>
 
         <TabsContent value="list" className="mt-4">
-          <RequestsListView statuses={statuses} requests={localRequests} />
+          <RequestsListView statuses={statuses} requests={requests} />
         </TabsContent>
       </Tabs>
     </div>

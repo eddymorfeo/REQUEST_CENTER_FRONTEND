@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   BookOpen,
   Bot,
+  HomeIcon,
   Settings2,
   SquareTerminal,
 } from "lucide-react";
@@ -20,6 +21,17 @@ export type SidebarConfig = {
 
 export const sidebarConfig: SidebarConfig = {
   navMain: [
+
+    {
+      title: "Inicio",
+      url: "/dashboard",
+      icon: HomeIcon,
+      isActive: true,
+      items: [
+        { title: "Dashboard", url: "/dashboard" },
+      ],
+    },
+
     {
       title: "Solicitudes",
       url: "/requests",

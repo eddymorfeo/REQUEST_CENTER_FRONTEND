@@ -6,29 +6,22 @@ import type { RequestItem } from "@/types/requests/request.types";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 
-export function RequestCard({
-  item,
-  isLocked,
-}: {
-  item: RequestItem;
-  isLocked?: boolean;
-}) {
+export function RequestCard({ item }: { item: RequestItem }) {
   const router = useRouter();
 
   return (
     <Card
-      className={[
-        "p-3 rounded-xl border bg-background hover:bg-muted/40 transition cursor-pointer",
-        isLocked ? "opacity-70 cursor-not-allowed" : "",
-      ].join(" ")}
+      className="p-3 rounded-xl border bg-background hover:bg-muted/40 transition cursor-pointer"
       onClick={() => router.push(`/requests/${item.id}`)}
       role="button"
-      aria-disabled={isLocked}
     >
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="font-medium leading-snug line-clamp-2">{item.title}</p>
-          <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
+        <div className="flex-1 min-w-0">
+          <p className="font-medium leading-snug overflow-hidden break-words line-clamp-2">
+            {item.title}
+          </p>
+
+          <p className="mt-1 text-xs text-muted-foreground overflow-hidden break-words line-clamp-2">
             {item.description}
           </p>
         </div>
