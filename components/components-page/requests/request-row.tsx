@@ -1,28 +1,85 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
+
 import type { RequestItem } from "@/types/requests/request.types";
+
 import { Badge } from "@/components/ui/badge";
+import { TableCell, TableRow } from "@/components/ui/table";
 
-export function RequestRow({ item }: { item: RequestItem }) {
+type Props = {
+  item: RequestItem;
+  assignee?: string; // ✅ nuevo
+};
+
+function formatDate(dateStr?: string) {
+  if (!dateStr) return "—";
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString();
+}
+
+export function RequestRow({ item, assignee }: Props) {
+  const router = useRouter();
+
+  const handleOpen = () => {
+    router.push(`/requests/${item.id}`);
+  };
+
   return (
-    <div className="grid grid-cols-[1fr_180px_140px] gap-3 items-center px-3 py-2 rounded-lg hover:bg-muted/40 transition">
-      <div className="min-w-0">
-        <p className="font-medium truncate">{item.title}</p>
-        <p className="text-xs text-muted-foreground truncate">{item.description}</p>
-      </div>
+    <TableRow
+      role="button"
+      tabIndex={0}
+      onClick={handleOpen}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") handleOpen();
+      }}
+      className="cursor-pointer transition-colors hover:bg-blue-100"
+    >
+      {/* Nombre (title + desc breve) */}
+      <TableCell className="align-top">
+        <div className="min-w-0">
+          <div className="font-medium leading-snug line-clamp-1">
+            {item.title ?? "—"}
+          </div>
+          <div className="mt-0.5 text-xs text-muted-foreground line-clamp-1">
+            {item.description ?? "—"}
+          </div>
+        </div>
+      </TableCell>
 
-      <div className="text-xs text-muted-foreground truncate">
-        {item.type_name ?? "—"}
-      </div>
+      {/* Tipo */}
+      <TableCell className="align-top">
+        <span className="text-sm text-muted-foreground">
+          {item.type_name ?? "—"}
+        </span>
+      </TableCell>
 
-      <div className="flex justify-end">
+      {/* Asignado a */}
+      <TableCell className="align-top">
+        <span className="text-sm">
+          {assignee?.trim() ? assignee : "Sin asignar"}
+        </span>
+      </TableCell>
+
+      {/* Prioridad */}
+      <TableCell className="align-top text-right">
         {item.priority_name ? (
-          <Badge variant="secondary">{item.priority_name}</Badge>
+          <Badge variant="secondary" className="rounded-full">
+            {item.priority_name}
+          </Badge>
         ) : (
-          <span className="text-xs text-muted-foreground">—</span>
+          <span className="text-sm text-muted-foreground">—</span>
         )}
-      </div>
-    </div>
+      </TableCell>
+
+      {/* Fecha */}
+      <TableCell className="align-top text-right">
+        <span className="text-sm text-muted-foreground">
+          {formatDate(item.created_at)}
+        </span>
+      </TableCell>
+    </TableRow>
   );
 }
