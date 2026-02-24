@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { RequestAttachmentsPanel } from "./request-attachments-panel";
 
 function findPrevNext(statuses: RequestStatus[], currentId: string) {
   const sorted = [...statuses].sort((a, b) => a.sort_order - b.sort_order);
@@ -414,6 +415,7 @@ export function RequestDetailPage() {
           </div>
         </Card>
       </div>
-    </div>
+      <RequestAttachmentsPanel requestId={request.id} requestTitle={request.title} />
+    </div>    
   );
 }
