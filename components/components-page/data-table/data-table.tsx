@@ -132,7 +132,7 @@ export function DataTable<TData, TValue>({
 
       <div className="rounded-2xl border bg-background shadow-sm overflow-hidden">
         <Table>
-          <TableHeader className="bg-muted/30">
+          <TableHeader className="bg-muted/30 bg-gradient-to-b from-blue-100 to-blue-300  bg-linear-to-r/srgb from-green-10 to-blue-50">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id} className="hover:bg-muted/30">
                 {headerGroup.headers.map((header) => (
@@ -155,8 +155,9 @@ export function DataTable<TData, TValue>({
                 <TableRow
                   key={row.id}
                   className={[
+                    "bg-blue-10",
                     "transition-colors",
-                    "hover:bg-muted/40",
+                    "hover:bg-blue-100",
                     onRowClick ? "cursor-pointer" : "",
                   ].join(" ")}
                   onClick={() => onRowClick?.(row.original)}

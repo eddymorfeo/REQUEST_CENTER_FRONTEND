@@ -5,6 +5,7 @@ import type { RequestItem } from "@/types/requests/request.types";
 import type { RequestStatus } from "@/types/requests/request-status.types";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { RequestCard } from "../request-card";
+import { StatusBadge } from "../badge/request-status-badge";
 
 type Props = {
   statuses: RequestStatus[];
@@ -35,9 +36,7 @@ export function RequestsBoardView({ statuses, requests }: Props) {
             >
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold uppercase tracking-wide">
-                    {status.name}
-                  </span>
+                  <StatusBadge value={status.name} />
                   <span className="text-xs text-muted-foreground">
                     {items.length}
                   </span>
@@ -57,6 +56,7 @@ export function RequestsBoardView({ statuses, requests }: Props) {
           );
         })}
       </div>
+
 
       <ScrollBar orientation="horizontal" />
     </ScrollArea>

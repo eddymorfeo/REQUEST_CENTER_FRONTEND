@@ -3,33 +3,28 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import type { RequestItem } from "@/types/requests/request.types";
-import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { PriorityBadge } from "./badge/request-priority-badge";
 
 export function RequestCard({ item }: { item: RequestItem }) {
   const router = useRouter();
 
   return (
     <Card
-      className="p-3 rounded-xl border bg-background hover:bg-muted/40 transition cursor-pointer"
+      className="p-3 rounded-xl border transition cursor-pointer bg-muted/30 bg-linear-to-r/srgb from-green-10 to-blue-50 transition-colors hover:bg-red-100"
       onClick={() => router.push(`/requests/${item.id}`)}
       role="button"
     >
       <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <p className="font-medium leading-snug overflow-hidden break-words line-clamp-2">
-            {item.title}
-          </p>
-
-          <p className="mt-1 text-xs text-muted-foreground overflow-hidden break-words line-clamp-2">
+        <div className="min-w-0">
+          <p className="font-medium leading-snug line-clamp-2">{item.title}</p>
+          <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
             {item.description}
           </p>
         </div>
 
         {item.priority_name ? (
-          <Badge variant="secondary" className="shrink-0">
-            {item.priority_name}
-          </Badge>
+          <PriorityBadge value={item.priority_name} className="shrink-0" />
         ) : null}
       </div>
 

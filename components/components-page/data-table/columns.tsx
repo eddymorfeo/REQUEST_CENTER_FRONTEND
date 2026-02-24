@@ -4,10 +4,13 @@ import * as React from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { ArrowUpDown } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 import type { RequestItem } from "@/types/requests/request.types";
+
+// ✅ Badges con color (ajusta la ruta si la tienes distinta)
+import { StatusBadge } from "@/components/components-page/requests/badge/request-status-badge";
+import { PriorityBadge } from "@/components/components-page/requests/badge/request-priority-badge";
 
 /**
  * Data que consumirá la tabla.
@@ -34,14 +37,11 @@ export const requestColumns: ColumnDef<RequestTableRow>[] = [
   {
     id: "status",
     header: "Estado",
-    accessorFn: (row) => row.status_name ?? row.status_code ?? "—",
+    // ✅ para ordenar/filtrar por estado de forma consistente
+    accessorFn: (row) => row.status_code ?? row.status_name ?? "—",
     cell: ({ row }) => {
-      const status = row.original.status_name ?? row.original.status_code ?? "—";
-      return (
-        <Badge variant="secondary" className="rounded-full">
-          {status}
-        </Badge>
-      );
+      const codeOrName = row.original.status_code ?? row.original.status_name ?? "—";
+      return <StatusBadge value={codeOrName} />;
     },
     enableSorting: true,
   },
@@ -119,18 +119,16 @@ export const requestColumns: ColumnDef<RequestTableRow>[] = [
         </Button>
       </div>
     ),
-    accessorFn: (row) => row.priority_name ?? "—",
-    cell: ({ row }) => (
-      <div className="flex justify-end">
-        {row.original.priority_name ? (
-          <Badge variant="outline" className="rounded-full">
-            {row.original.priority_name}
-          </Badge>
-        ) : (
-          "—"
-        )}
-      </div>
-    ),
+    // ✅ ordenable por prioridad (nombre/código)
+    accessorFn: (row) => row.priority_code ?? row.priority_name ?? "—",
+    cell: ({ row }) => {
+      const codeOrName = row.original.priority_code ?? row.original.priority_name ?? "—";
+      return (
+        <div className="flex justify-end">
+          <PriorityBadge value={codeOrName} />
+        </div>
+      );
+    },
     enableSorting: true,
   },
   {
@@ -149,7 +147,8 @@ export const requestColumns: ColumnDef<RequestTableRow>[] = [
       </div>
     ),
     accessorKey: "created_at",
-    sortingFn: (rowA, rowB) => dateSort(rowA.original.created_at, rowB.original.created_at),
+    sortingFn: (rowA, rowB) =>
+      dateSort(rowA.original.created_at, rowB.original.created_at),
     cell: ({ row }) => (
       <div className="flex justify-end text-sm text-muted-foreground">
         {formatDate(row.original.created_at)}

@@ -29,6 +29,8 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { RequestAttachmentsPanel } from "./request-attachments-panel";
+import { StatusBadge } from "./badge/request-status-badge";
+import { PriorityBadge } from "./badge/request-priority-badge";
 
 function findPrevNext(statuses: RequestStatus[], currentId: string) {
   const sorted = [...statuses].sort((a, b) => a.sort_order - b.sort_order);
@@ -306,8 +308,8 @@ export function RequestDetailPage() {
             </div>
 
             <div className="flex gap-2">
-              <Badge variant="secondary">{current?.name ?? request.status_name ?? "—"}</Badge>
-              {request.priority_name ? <Badge>{request.priority_name}</Badge> : null}
+              <StatusBadge value={current?.name ?? request.status_name ?? "—"} />
+              {request.priority_name ? <PriorityBadge value={request.priority_name} /> : null}
             </div>
           </div>
 
@@ -416,6 +418,6 @@ export function RequestDetailPage() {
         </Card>
       </div>
       <RequestAttachmentsPanel requestId={request.id} requestTitle={request.title} />
-    </div>    
+    </div>
   );
 }
