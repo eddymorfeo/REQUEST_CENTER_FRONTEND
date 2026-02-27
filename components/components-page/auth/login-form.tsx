@@ -73,10 +73,10 @@ export default function LoginForm() {
 
           <div className="mt-auto max-w-md">
             <h1 className="text-3xl font-semibold leading-tight">
-              Gestiona solicitudes como en ClickUp.
+              Sistema de gestión de solicitudes.
             </h1>
             <p className="mt-3 text-white/70">
-              Login seguro, tablero Kanban con drag & drop, historial y adjuntos por tarjeta.
+              Registro de solicitudes, asignación, seguimiento y estadísticas de gestión.
             </p>
           </div>
         </div>

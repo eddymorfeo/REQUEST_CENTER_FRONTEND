@@ -361,7 +361,7 @@ export function RequestDetailPage() {
                   <SelectContent>
                     {users.map((u) => (
                       <SelectItem key={u.id} value={u.id}>
-                        {u.full_name} — {u.email}
+                        {u.full_name}
                       </SelectItem>
                     ))}
                   </SelectContent>
