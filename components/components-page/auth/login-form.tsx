@@ -37,10 +37,26 @@ export default function LoginForm() {
     mode: "onBlur",
   });
 
+  // ✅ Mostrar alerta si venimos por token expirado
   React.useEffect(() => {
+    const url = new URL(window.location.href);
+    const reason = url.searchParams.get("reason");
 
+    if (reason === "expired") {
+      // evita repetir
+      url.searchParams.delete("reason");
+      window.history.replaceState({}, "", url.pathname + url.search);
+
+      void alerts.error("Sesión expirada", "Tu sesión expiró. Inicia sesión nuevamente.");
+    }
+  }, []);
+
+  React.useEffect(() => {
     if (!isBootstrapping && isAuthenticated) {
-      window.location.href = "/dashboard";
+      // Si existe next=..., vuelve ahí. Si no, dashboard.
+      const url = new URL(window.location.href);
+      const next = url.searchParams.get("next");
+      window.location.href = next ? next : "/dashboard";
     }
   }, [isBootstrapping, isAuthenticated]);
 
@@ -48,7 +64,6 @@ export default function LoginForm() {
     try {
       setIsSubmitting(true);
       await login(values);
-
     } catch (e: any) {
       await alerts.error(
         "No se pudo iniciar sesión",
