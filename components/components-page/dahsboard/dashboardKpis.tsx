@@ -51,8 +51,6 @@ export function DashboardKpis({ overview, process, openStats }: Props) {
               <CardTitle className="text-sm">Total creadas</CardTitle>
             </div>
           </div>
-          
-          
         </CardHeader>
         <CardContent className="text-3xl font-semibold">
           {overview.kpis.createdInRange}

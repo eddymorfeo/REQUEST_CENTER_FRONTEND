@@ -95,10 +95,10 @@ export function NavUser({
               </div>
             </DropdownMenuLabel>
 
-              <DropdownMenuItem>
+              {/* <DropdownMenuItem>
                 <BadgeCheck className="mr-2 size-4" />
                 Account
-              </DropdownMenuItem>
+              </DropdownMenuItem> */}
 
             <DropdownMenuSeparator />
 

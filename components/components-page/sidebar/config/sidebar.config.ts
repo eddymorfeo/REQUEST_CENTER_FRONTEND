@@ -5,6 +5,7 @@ import {
   HomeIcon,
   Settings2,
   SquareTerminal,
+  User2,
 } from "lucide-react";
 
 export type SidebarNavItem = {
@@ -42,25 +43,27 @@ export const sidebarConfig: SidebarConfig = {
         { title: "Tablero", url: "/requests?view=board" },
       ],
     },
-    // {
-    //   title: "Modelos",
-    //   url: "#",
-    //   icon: Bot,
-    //   items: [
-    //     { title: "Tipos de Solicitud", url: "/catalogs/request-types" },
-    //     { title: "Prioridades", url: "/catalogs/priorities" },
-    //     { title: "Estados", url: "/catalogs/status" },
-    //   ],
-    // },
-    // {
-    //   title: "Documentación",
-    //   url: "#",
-    //   icon: BookOpen,
-    //   items: [
-    //     { title: "Introducción", url: "/docs" },
-    //     { title: "Guía rápida", url: "/docs/get-started" },
-    //   ],
-    // },
+    {
+      title: "Administración",
+      url: "/settings",
+      icon: Settings2,
+      isActive: true,
+      items: [
+        { title: "Usuarios", url: "/settings/users" },
+        { title: "Prioridades", url: "/settings/priorities" },
+        { title: "Estados", url: "/settings/status" },
+        { title: "Grupos", url: "/settings/groups" },
+      ],
+    },
+    {
+      title: "Cuenta",
+      url: "/account",
+      icon: User2,
+      isActive: true,
+      items: [
+        { title: "Mi cuenta", url: "/account" },
+      ],
+    },
     // {
     //   title: "Configuración",
     //   url: "#",
