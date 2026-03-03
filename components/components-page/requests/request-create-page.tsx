@@ -245,7 +245,7 @@ export function RequestCreatePage() {
 
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <label className="text-sm font-medium">Tipo</label>
+              <label className="text-sm font-medium">Grupo</label>
               <Select
                 value={requestTypeId}
                 onValueChange={setRequestTypeId}

@@ -37,11 +37,11 @@ export const requestColumns: ColumnDef<RequestTableRow>[] = [
   {
     id: "status",
     header: "Estado",
-    // ✅ para ordenar/filtrar por estado de forma consistente
-    accessorFn: (row) => row.status_code ?? row.status_name ?? "—",
+    accessorFn: (row) => (row.status_name ?? row.status_id ?? "—").toUpperCase(),
     cell: ({ row }) => {
-      const codeOrName = row.original.status_code ?? row.original.status_name ?? "—";
-      return <StatusBadge value={codeOrName} />;
+      const raw = row.original.status_name ?? row.original.status_id ?? "—";
+      const value = String(raw).toUpperCase();
+      return <StatusBadge value={value} />;
     },
     enableSorting: true,
   },
@@ -75,7 +75,7 @@ export const requestColumns: ColumnDef<RequestTableRow>[] = [
   },
   {
     id: "type",
-    header: "Tipo",
+    header: "Grupo",
     accessorFn: (row) => row.type_name ?? "—",
     cell: ({ row }) => (
       <span className="text-sm text-muted-foreground">
@@ -119,13 +119,13 @@ export const requestColumns: ColumnDef<RequestTableRow>[] = [
         </Button>
       </div>
     ),
-    // ✅ ordenable por prioridad (nombre/código)
-    accessorFn: (row) => row.priority_code ?? row.priority_name ?? "—",
+    accessorFn: (row) => (row.priority_name ?? "—").toUpperCase(),
     cell: ({ row }) => {
-      const codeOrName = row.original.priority_code ?? row.original.priority_name ?? "—";
+      const raw = row.original.priority_name ?? "—";
+      const value = String(raw).toUpperCase();
       return (
         <div className="flex justify-end">
-          <PriorityBadge value={codeOrName} />
+          <PriorityBadge value={value} />
         </div>
       );
     },

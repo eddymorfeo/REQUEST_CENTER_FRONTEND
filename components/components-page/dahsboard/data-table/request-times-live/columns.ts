@@ -6,6 +6,7 @@ import { hoursToDhM } from "@/components/components-page/dahsboard/dashboardForm
 import { StatusBadge } from "@/components/components-page/requests/badge/request-status-badge";
 import { PriorityBadge } from "@/components/components-page/requests/badge/request-priority-badge";
 import type { RequestTimesLiveRow } from "@/api/metrics/metrics.api";
+import { formatDdMmYyyy } from "@/utils/formatDate";
 
 function timeCell(hours: number) {
   return React.createElement("span", { className: "font-medium" }, hoursToDhM(hours));
@@ -15,12 +16,12 @@ export const requestTimesLiveColumns: ColumnDef<RequestTimesLiveRow>[] = [
   {
     id: "status",
     header: "Estado",
-    accessorFn: (row) => row.statusCode ?? row.statusName ?? "—",
+    accessorFn: (row) => (row.statusCode ?? row.statusName ?? "—").toUpperCase(),
     cell: ({ row }) => {
-      const value = row.original.statusCode ?? row.original.statusName ?? "—";
+      const raw = row.original.statusName ?? row.original.statusId ?? "—";
+      const value = String(raw).toUpperCase();
       return React.createElement(StatusBadge, { value });
     },
-    enableSorting: true,
   },
   {
     id: "title",
@@ -30,10 +31,10 @@ export const requestTimesLiveColumns: ColumnDef<RequestTimesLiveRow>[] = [
       const r = row.original;
       return React.createElement(
         "div",
-        { className: "min-w-[260px]" },
+        { className: "min-w-[150px]" },
         [
           React.createElement("div", { key: "t", className: "font-medium leading-5" }, r.title),
-          React.createElement("div", { key: "id", className: "text-xs text-muted-foreground" }, r.id),
+          React.createElement("div", { key: "id", className: "text-xs text-muted-foreground" }, formatDdMmYyyy(r.createdAt)),
         ]
       );
     },
@@ -41,7 +42,7 @@ export const requestTimesLiveColumns: ColumnDef<RequestTimesLiveRow>[] = [
   },
   {
     id: "type",
-    header: "Tipo",
+    header: "Grupo",
     accessorFn: (row) => row.typeName ?? "—",
     cell: ({ row }) =>
       React.createElement(
@@ -66,9 +67,10 @@ export const requestTimesLiveColumns: ColumnDef<RequestTimesLiveRow>[] = [
   {
     id: "priority",
     header: "Prioridad",
-    accessorFn: (row) => row.priorityName ?? "—",
+    accessorFn: (row) => (row.priorityName ?? "—").toUpperCase(),
     cell: ({ row }) => {
-      const value = row.original.priorityName ?? "—";
+      const raw = row.original.priorityName ?? "—";
+      const value = String(raw).toUpperCase();
       return React.createElement(
         "div",
         { className: "flex justify-start" },

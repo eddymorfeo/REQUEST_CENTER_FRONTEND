@@ -131,7 +131,7 @@ export function DashboardFilters({
         </div>
 
         <div className="space-y-1">
-          <div className="text-xs text-muted-foreground">Tipo</div>
+          <div className="text-xs text-muted-foreground">Grupo</div>
           <Select
             value={value.requestTypeId ?? "ALL"}
             onValueChange={(v) =>

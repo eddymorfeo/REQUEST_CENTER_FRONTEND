@@ -44,7 +44,8 @@ export function RequestTimesDataTable({ rows }: Props) {
       <CardHeader className="gap-3">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
-                <CardTitle className="text-sm">Tiempo por solicitud y estado</CardTitle>            
+                <CardTitle className="text-sm uppercase">Tiempo por solicitud y estado</CardTitle>       
+                <p className="text-xs pt-1 text-gray-500">Terminado</p>      
             </div>
                 <Input
                     className="sm:max-w-[280px]"

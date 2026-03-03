@@ -44,7 +44,8 @@ export function RequestTimesLiveDataTable({ rows }: Props) {
       <CardHeader className="gap-3">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
-                <CardTitle className="text-sm">Tiempo en vivo por solicitud y estado</CardTitle>            
+                <CardTitle className="text-sm uppercase">Análisis en tiempo real por solicitud y estado</CardTitle>
+                <p className="text-xs pt-1 text-gray-500">Sin Asignar - Asignadas - En Proceso</p>            
             </div>
             
             <Input

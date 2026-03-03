@@ -193,7 +193,7 @@ export function OpenDistributionCharts({ data }: { data: DistributionData | null
 
       <Card className="md:col-span-4">
         <CardHeader>
-          <CardTitle className="text-sm">Activas por tipo</CardTitle>
+          <CardTitle className="text-sm">Activas por grupo</CardTitle>
         </CardHeader>
         <CardContent className="h-[280px]">
           <Doughnut
