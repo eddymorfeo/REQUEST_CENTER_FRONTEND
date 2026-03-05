@@ -53,6 +53,7 @@ export const sidebarConfig: SidebarConfig = {
         { title: "Prioridades", url: "/settings/priorities" },
         { title: "Estados", url: "/settings/status" },
         { title: "Grupos", url: "/settings/groups" },
+        { title: "Roles", url: "/settings/roles" },
       ],
     },
     {

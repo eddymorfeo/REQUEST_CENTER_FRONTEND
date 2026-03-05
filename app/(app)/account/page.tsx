@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { buildLoginRedirectUrl, isLoggedIn } from "@/utils/guards/auth.guard";
+import AccountProfileView from "@/components/components-page/account/account-profile-view";
 
 export default function Account() {
 
@@ -17,5 +18,5 @@ export default function Account() {
 
   if (!isLoggedIn()) return null;
 
-    return <h1>Mis Datos</h1>;
+    return <AccountProfileView/>;
 }

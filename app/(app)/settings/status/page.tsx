@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { buildLoginRedirectUrl, isLoggedIn } from "@/utils/guards/auth.guard";
+import StatusListView from "@/components/components-page/settings/status/status-list-view";
 
 export default function Status() {
 
@@ -17,5 +18,5 @@ export default function Status() {
 
   if (!isLoggedIn()) return null;
 
-    return <h1>Estados</h1>;
+    return <StatusListView />;
 }

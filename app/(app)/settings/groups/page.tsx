@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { buildLoginRedirectUrl, isLoggedIn } from "@/utils/guards/auth.guard";
+import GroupsListView from "@/components/components-page/settings/groups/groups-list-view";
 
 export default function Groups() {
 
@@ -17,5 +18,5 @@ export default function Groups() {
 
   if (!isLoggedIn()) return null;
 
-    return <h1>Grupos</h1>;
+    return <GroupsListView/>;
 }

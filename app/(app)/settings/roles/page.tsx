@@ -3,11 +3,10 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { buildLoginRedirectUrl, isLoggedIn } from "@/utils/guards/auth.guard";
-import UsersListView from "@/components/components-page/settings/users/users-list-view";
+import RolesListView from "@/components/components-page/settings/roles/roles-list-view";
 
-export default function Users() {
-
-      const router = useRouter();
+export default function RolePage() {
+  const router = useRouter();
 
   React.useEffect(() => {
     if (!isLoggedIn()) {
@@ -18,5 +17,5 @@ export default function Users() {
 
   if (!isLoggedIn()) return null;
 
-    return <UsersListView />;
+  return <RolesListView />;
 }

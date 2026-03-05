@@ -3,10 +3,10 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { buildLoginRedirectUrl, isLoggedIn } from "@/utils/guards/auth.guard";
+import PrioritiesListView from "@/components/components-page/settings/priorities/priorities-list-view";
 
-export default function Priorities() {
-
-      const router = useRouter();
+export default function PrioritiesPage() {
+  const router = useRouter();
 
   React.useEffect(() => {
     if (!isLoggedIn()) {
@@ -17,5 +17,5 @@ export default function Priorities() {
 
   if (!isLoggedIn()) return null;
 
-    return <h1>Prioridades</h1>;
+  return <PrioritiesListView />;
 }
