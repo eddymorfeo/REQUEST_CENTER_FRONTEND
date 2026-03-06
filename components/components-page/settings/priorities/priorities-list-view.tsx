@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { motion } from "framer-motion";
 import { requestPrioritiesApi } from "@/api/requests/request-priorities.api";
 
 import PrioritiesDataTable from "./data-table/data-table";
@@ -9,6 +10,7 @@ import type { PriorityTableRow } from "./data-table/columns";
 import { Button } from "@/components/ui/button";
 import { PriorityFormDialog } from "./dialogs/priority-form-dialog";
 import { PriorityDeleteDialog } from "./dialogs/priority-delete-dialog";
+import { Plus } from "lucide-react";
 
 function pickItems<T>(res: any): T[] {
   return (res?.items ?? res?.data?.items ?? res?.data ?? []) as T[];
@@ -88,10 +90,27 @@ export default function PrioritiesListView() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Prioridades</h1>
-        <Button onClick={handleOpenCreate}>+ Crear Prioridad</Button>
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.18, ease: "easeOut" }}
+      className="space-y-4"
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-lg font-semibold">Mantenedor de Prioridades</h1>
+          <p className="text-sm text-muted-foreground">
+            Administra la prioridades del sistema: crea, edita y elimina registros.
+          </p>
+        </div>
+
+        <Button
+          onClick={handleOpenCreate}
+          className="rounded-xl shadow-sm bg-green-700 text-background hover:bg-green-500 transition gap-2"
+        >
+          <Plus className="size-4" />
+          CREAR PRIORIDADES
+        </Button>
       </div>
 
       {error ? (
@@ -100,22 +119,24 @@ export default function PrioritiesListView() {
         </div>
       ) : null}
 
-      <PrioritiesDataTable data={rows} isLoading={isLoading} onEdit={handleOpenEdit} onDelete={handleOpenDelete} />
+      <div className="pt-10">
+        <PrioritiesDataTable data={rows} isLoading={isLoading} onEdit={handleOpenEdit} onDelete={handleOpenDelete} />
 
-      <PriorityFormDialog
-        open={openForm}
-        mode={formMode}
-        initial={selected}
-        onOpenChange={setOpenForm}
-        onSubmit={handleSubmitForm}
-      />
+        <PriorityFormDialog
+          open={openForm}
+          mode={formMode}
+          initial={selected}
+          onOpenChange={setOpenForm}
+          onSubmit={handleSubmitForm}
+        />
 
-      <PriorityDeleteDialog
-        open={openDelete}
-        priority={selected}
-        onOpenChange={setOpenDelete}
-        onConfirm={handleConfirmDelete}
-      />
-    </div>
+        <PriorityDeleteDialog
+          open={openDelete}
+          priority={selected}
+          onOpenChange={setOpenDelete}
+          onConfirm={handleConfirmDelete}
+        />
+      </div>
+    </motion.div>
   );
 }

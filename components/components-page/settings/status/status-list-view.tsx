@@ -1,12 +1,14 @@
 "use client";
 
 import * as React from "react";
+import { motion } from "framer-motion";
 import { requestStatusApi } from "@/api/requests/request-status.api";
 import StatusDataTable from "./data-table/data-table";
 import type { StatusTableRow } from "./data-table/columns";
 import { Button } from "@/components/ui/button";
 import { StatusFormDialog } from "./dialogs/status-form-dialog";
 import { StatusDeleteDialog } from "./dialogs/status-delete-dialog";
+import { Plus } from "lucide-react";
 
 function pickItems<T>(res: any): T[] {
   return (res?.items ?? res?.data?.items ?? res?.data ?? []) as T[];
@@ -95,10 +97,27 @@ export default function StatusListView() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Estados</h1>
-        <Button onClick={handleOpenCreate}>+ Crear Estado</Button>
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.18, ease: "easeOut" }}
+      className="space-y-4"
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-lg font-semibold">Mantenedor de Estados</h1>
+          <p className="text-sm text-muted-foreground">
+            Administra los estados de las solicitudes del sistema: crea, edita y elimina registros.
+          </p>
+        </div>
+
+        <Button
+          onClick={handleOpenCreate}
+          className="rounded-xl shadow-sm bg-green-700 text-background hover:bg-green-500 transition gap-2"
+        >
+          <Plus className="size-4" />
+          CREAR ESTADOS
+        </Button>
       </div>
 
       {error ? (
@@ -107,27 +126,29 @@ export default function StatusListView() {
         </div>
       ) : null}
 
-      <StatusDataTable
-        data={rows}
-        isLoading={isLoading}
-        onEdit={handleOpenEdit}
-        onDelete={handleOpenDelete}
-      />
+      <div className="pt-10">
+        <StatusDataTable
+          data={rows}
+          isLoading={isLoading}
+          onEdit={handleOpenEdit}
+          onDelete={handleOpenDelete}
+        />
 
-      <StatusFormDialog
-        open={openForm}
-        mode={formMode}
-        initial={selected}
-        onOpenChange={setOpenForm}
-        onSubmit={handleSubmitForm}
-      />
+        <StatusFormDialog
+          open={openForm}
+          mode={formMode}
+          initial={selected}
+          onOpenChange={setOpenForm}
+          onSubmit={handleSubmitForm}
+        />
 
-      <StatusDeleteDialog
-        open={openDelete}
-        status={selected}
-        onOpenChange={setOpenDelete}
-        onConfirm={handleConfirmDelete}
-      />
-    </div>
+        <StatusDeleteDialog
+          open={openDelete}
+          status={selected}
+          onOpenChange={setOpenDelete}
+          onConfirm={handleConfirmDelete}
+        />
+      </div>
+    </motion.div>
   );
 }

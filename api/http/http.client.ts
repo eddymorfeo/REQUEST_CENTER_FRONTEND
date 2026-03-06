@@ -30,7 +30,6 @@ function shouldLogout(resStatus: number, payload: any) {
 function redirectToLoginBecauseExpired() {
   if (!isBrowser()) return;
 
-  // Evita loops de redirección si varias requests fallan a la vez
   const key = "rc_auth_expired_redirecting";
   if (sessionStorage.getItem(key) === "1") return;
   sessionStorage.setItem(key, "1");
@@ -66,11 +65,8 @@ export async function http<T>(options: RequestOptions): Promise<T> {
   const payload = isJson ? await res.json() : null;
 
   if (!res.ok) {
-    // ✅ Logout + redirect cuando token expiró/invalidó
     if (auth && shouldLogout(res.status, payload)) {
       redirectToLoginBecauseExpired();
-      // Igual lanzamos error (por si estás en SSR/otro flujo),
-      // pero en browser ya estarás redirigiendo.
     }
 
     const msg =
@@ -80,9 +76,6 @@ export async function http<T>(options: RequestOptions): Promise<T> {
 
     throw new ApiError(msg, res.status, payload);
   }
-
-  // Si estábamos en “redirecting” por token expirado y se vuelve a loguear,
-  // se limpiará desde login-form (opcional), pero aquí no hace falta.
 
   return payload as T;
 }

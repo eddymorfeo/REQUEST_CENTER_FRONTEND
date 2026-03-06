@@ -26,7 +26,6 @@ function requireApiUrl(): string {
 }
 
 export const requestAttachmentsApi = {
-  // GET /api/request-attachments?requestId=...
   listByRequestId(requestId: string) {
     return http<ListResponse>({
       method: "GET",
@@ -35,7 +34,6 @@ export const requestAttachmentsApi = {
     });
   },
 
-  // POST /api/request-attachments/upload (multipart/form-data)
   async upload(payload: { requestId: string; title?: string; file: File }) {
     const base = requireApiUrl();
 
@@ -47,7 +45,6 @@ export const requestAttachmentsApi = {
     const headers: HeadersInit = {};
     const token = tokenStorage.getToken();
     if (token) headers["Authorization"] = `Bearer ${token}`;
-    // ❗ NO setear Content-Type aquí (fetch lo setea con boundary)
 
     const res = await fetch(`${base}/request-attachments/upload`, {
       method: "POST",
@@ -66,7 +63,6 @@ export const requestAttachmentsApi = {
     return data as UploadResponse;
   },
 
-  // DELETE /api/request-attachments/:id
   delete(id: string) {
     return http<{ success: boolean; message?: string; data?: unknown }>({
       method: "DELETE",
@@ -75,7 +71,6 @@ export const requestAttachmentsApi = {
     });
   },
 
-  // GET /api/request-attachments/download/:id  (para descarga por fetch/blob)
   async download(attachmentId: string): Promise<{ blob: Blob; filename: string }> {
     const base = requireApiUrl();
     const token = tokenStorage.getToken();
@@ -96,8 +91,6 @@ export const requestAttachmentsApi = {
     }
 
     const blob = await res.blob();
-
-    // intenta sacar nombre desde Content-Disposition
     const disposition = res.headers.get("content-disposition") || "";
     const match = disposition.match(/filename="([^"]+)"/i);
     const filename = match?.[1] || `attachment-${attachmentId}`;

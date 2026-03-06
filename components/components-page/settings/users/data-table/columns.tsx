@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { ArrowUpDown } from "lucide-react";
+import { ArrowUpDown, Pencil, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { formatDdMmYyyy } from "@/utils/formatDate";
@@ -34,11 +34,11 @@ function headerSortable(label: string, column: any) {
     <Button
       type="button"
       variant="ghost"
-      className="px-0"
+      className="h-8 px-2 -ml-2 text-muted-foreground hover:text-foreground"
       onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
     >
-      {label}
-      <ArrowUpDown className="ml-2 size-4" />
+      <span className="font-medium">{label}</span>
+      <ArrowUpDown className="ml-2 size-4 opacity-70" />
     </Button>
   );
 }
@@ -50,7 +50,9 @@ export function buildUserColumns(actions: ColumnActions): ColumnDef<UserTableRow
       accessorKey: "username",
       header: ({ column }) => headerSortable("Usuario", column),
       cell: ({ row }) => (
-        <span className="text-sm font-medium pl-3">{row.original.username ?? "—"}</span>
+        <div className="pl-2">
+          <div className="text-sm font-medium leading-tight">{row.original.username ?? "—"}</div>
+        </div>
       ),
       enableSorting: true,
       enableColumnFilter: true,
@@ -59,7 +61,11 @@ export function buildUserColumns(actions: ColumnActions): ColumnDef<UserTableRow
       id: "fullName",
       accessorKey: "full_name",
       header: ({ column }) => headerSortable("Nombre", column),
-      cell: ({ row }) => <span className="text-sm">{row.original.full_name ?? "—"}</span>,
+      cell: ({ row }) => (
+        <div className="min-w-0">
+          <div className="text-sm leading-tight line-clamp-1">{row.original.full_name ?? "—"}</div>
+        </div>
+      ),
       enableSorting: true,
     },
     {
@@ -74,20 +80,22 @@ export function buildUserColumns(actions: ColumnActions): ColumnDef<UserTableRow
     },
     {
       id: "role",
-      header: ({ column }) => headerSortable("Role", column),
+      header: ({ column }) => headerSortable("Rol", column),
       accessorFn: (row) => row.roleName ?? "—",
-      cell: ({ row }) => <span className="text-sm">{row.original.roleName || "—"}</span>,
+      cell: ({ row }) => (
+        <span className="text-sm">{row.original.roleName || "—"}</span>
+      ),
       enableSorting: true,
     },
     {
       id: "createdAt",
       header: ({ column }) => (
-        <div className="flex justify-center">{headerSortable("Fecha creación", column)}</div>
+        <div className="flex justify-center">{headerSortable("Creación", column)}</div>
       ),
       accessorKey: "created_at",
       sortingFn: (rowA, rowB) => dateSort(rowA.original.created_at, rowB.original.created_at),
       cell: ({ row }) => (
-        <div className="flex justify-center text-sm text-muted-foreground">
+        <div className="flex justify-center text-sm text-muted-foreground tabular-nums">
           {row.original.created_at ? formatDdMmYyyy(row.original.created_at) : "—"}
         </div>
       ),
@@ -96,12 +104,12 @@ export function buildUserColumns(actions: ColumnActions): ColumnDef<UserTableRow
     {
       id: "updatedAt",
       header: ({ column }) => (
-        <div className="flex justify-center">{headerSortable("Fecha actualización", column)}</div>
+        <div className="flex justify-center">{headerSortable("Actualización", column)}</div>
       ),
       accessorKey: "updated_at",
       sortingFn: (rowA, rowB) => dateSort(rowA.original.updated_at, rowB.original.updated_at),
       cell: ({ row }) => (
-        <div className="flex justify-center text-sm text-muted-foreground">
+        <div className="flex justify-center text-sm text-muted-foreground tabular-nums">
           {row.original.updated_at ? formatDdMmYyyy(row.original.updated_at) : "—"}
         </div>
       ),
@@ -109,30 +117,35 @@ export function buildUserColumns(actions: ColumnActions): ColumnDef<UserTableRow
     },
     {
       id: "actions",
-      header: () => <div className="text-right flex gap-2 justify-center">Acciones</div>,
+      header: () => <div className="text-right pr-2">Acciones</div>,
       cell: ({ row }) => (
-        <div className="flex gap-2 justify-center">
+        <div className="flex items-center justify-end gap-1 pr-2">
           <Button
             type="button"
-            variant="outline"
-            size="sm"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            title="Editar"
             onClick={(e) => {
               e.stopPropagation();
               actions.onEdit(row.original);
             }}
           >
-            Editar
+            <Pencil className="size-4" />
           </Button>
+
           <Button
             type="button"
-            variant="destructive"
-            size="sm"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-destructive hover:text-destructive"
+            title="Eliminar"
             onClick={(e) => {
               e.stopPropagation();
               actions.onDelete(row.original);
             }}
           >
-            Borrar
+            <Trash2 className="size-4" />
           </Button>
         </div>
       ),

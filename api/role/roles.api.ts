@@ -28,20 +28,16 @@ export type RoleDetailResponse = {
 export type CreateRolePayload = {
   code: string;
   name: string;
-  isActive?: boolean; // backend usa camelCase en body
+  isActive?: boolean;
 };
 
 export type UpdateRolePayload = {
   code: string;
   name: string;
-  isActive: boolean; // backend exige boolean (no optional) en update
+  isActive: boolean;
 };
 
 export const rolesApi = {
-  /**
-   * Listado simple (por defecto page=1&pageSize=20 en backend).
-   * Mantiene firma simple como usersApi.listUsers().
-   */
   listRoles() {
     return http<RolesListResponse>({
       method: "GET",
@@ -50,10 +46,6 @@ export const rolesApi = {
     });
   },
 
-  /**
-   * Listado paginado (útil para pantallas de admin).
-   * No rompe listRoles, es una función adicional.
-   */
   listRolesPaged(params?: { page?: number; pageSize?: number }) {
     const searchParams = new URLSearchParams();
     if (params?.page) searchParams.set("page", String(params.page));
@@ -94,7 +86,6 @@ export const rolesApi = {
   },
 
   deleteRole(id: string) {
-    // backend responde 204 No Content cuando elimina OK
     return http<void>({
       method: "DELETE",
       path: `/roles/${id}`,

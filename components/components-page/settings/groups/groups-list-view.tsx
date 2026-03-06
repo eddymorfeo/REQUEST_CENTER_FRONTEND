@@ -1,12 +1,14 @@
 "use client";
 
 import * as React from "react";
+import { motion } from "framer-motion";
 import { requestTypesApi } from "@/api/requests/request-types.api";
 import GroupsDataTable from "./data-table/data-table";
 import type { GroupTableRow } from "./data-table/columns";
 import { Button } from "@/components/ui/button";
 import { GroupFormDialog } from "./dialogs/group-form-dialog";
 import { GroupDeleteDialog } from "./dialogs/group-delete-dialog";
+import { Plus } from "lucide-react";
 
 function pickItems<T>(res: any): T[] {
   return (res?.items ?? res?.data?.items ?? res?.data ?? []) as T[];
@@ -87,11 +89,28 @@ export default function GroupsListView() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Grupos</h1>
-        <Button onClick={handleOpenCreate}>+ Crear Grupo</Button>
-      </div>
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.18, ease: "easeOut" }}
+      className="space-y-4"
+    >
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <h1 className="text-lg font-semibold">Mantenedor de Grupos</h1>
+            <p className="text-sm text-muted-foreground">
+              Administra los grupos del sistema: crea, edita y elimina registros.
+            </p>
+          </div>
+
+          <Button
+            onClick={handleOpenCreate}
+            className="rounded-xl shadow-sm bg-green-700 text-background hover:bg-green-500 transition gap-2"
+          >
+            <Plus className="size-4" />
+            CREAR GRUPOS
+          </Button>
+        </div>
 
       {error ? (
         <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm">
@@ -99,6 +118,7 @@ export default function GroupsListView() {
         </div>
       ) : null}
 
+      <div className="pt-10">
       <GroupsDataTable data={rows} isLoading={isLoading} onEdit={handleOpenEdit} onDelete={handleOpenDelete} />
 
       <GroupFormDialog
@@ -115,6 +135,7 @@ export default function GroupsListView() {
         onOpenChange={setOpenDelete}
         onConfirm={handleConfirmDelete}
       />
-    </div>
+      </div>
+    </motion.div>
   );
 }

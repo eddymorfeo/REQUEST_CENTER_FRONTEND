@@ -1,6 +1,5 @@
 import { http } from "@/api/http/http.client";
 
-/** Respuestas */
 type SuccessData<T> = { success: true; data: T };
 type SuccessItems<T> = { success: true; items: T[] };
 
@@ -25,7 +24,6 @@ function toQueryString(query: MetricsQuery) {
     return qs ? `?${qs}` : "";
 }
 
-/** Catálogos reales según tu backend (items + campos de auditoría) */
 export type CatalogItem = {
     id: string;
     code: string;
@@ -33,7 +31,7 @@ export type CatalogItem = {
     description?: string | null;
     user_id?: string | null;
     is_active: boolean;
-    sort_order?: number; // status/priorities lo tienen
+    sort_order?: number;
     created_at?: string;
     updated_at?: string;
 };
@@ -154,12 +152,10 @@ export type RequestTimesLiveRow = {
   createdAt: string;
   closedAt: string | null;
   endAt: string;
-
   unassignedHours: number;
   assignedHours: number;
   inProgressHours: number;
   totalHours: number;
-
   currentStatusHours: number;
 };
 
@@ -206,7 +202,6 @@ export const metricsApi = {
         });
     },
 
-    // ✅ catálogos: tu backend responde { success, items: [...] }
     requestStatus() {
         return http<SuccessItems<CatalogItem>>({ method: "GET", path: "/request-status" });
     },

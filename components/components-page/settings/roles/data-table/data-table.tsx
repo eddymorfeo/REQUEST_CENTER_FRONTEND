@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { DataTable } from "@/components/components-page/data-table/data-table";
-
 import { buildRoleColumns, type RoleTableRow } from "./columns";
 
 type Props = {

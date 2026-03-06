@@ -1,14 +1,14 @@
 "use client";
 
 import * as React from "react";
+import { motion } from "framer-motion";
 import { rolesApi } from "@/api/role/roles.api";
-
 import RolesDataTable from "./data-table/data-table";
 import type { RoleTableRow } from "./data-table/columns";
-
 import { Button } from "@/components/ui/button";
 import { RoleFormDialog } from "./dialogs/role-form-dialog";
 import { RoleDeleteDialog } from "./dialogs/role-delete-dialog";
+import { Plus } from "lucide-react";
 
 function pickItems<T>(res: any): T[] {
   return (res?.items ?? res?.data?.items ?? res?.data ?? []) as T[];
@@ -18,11 +18,9 @@ export default function RolesListView() {
   const [rows, setRows] = React.useState<RoleTableRow[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-
   const [openForm, setOpenForm] = React.useState(false);
   const [formMode, setFormMode] = React.useState<"create" | "edit">("create");
   const [selected, setSelected] = React.useState<RoleTableRow | null>(null);
-
   const [openDelete, setOpenDelete] = React.useState(false);
 
   const load = React.useCallback(async () => {
@@ -87,10 +85,27 @@ export default function RolesListView() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Roles</h1>
-        <Button onClick={handleOpenCreate}>+ Crear Rol</Button>
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.18, ease: "easeOut" }}
+      className="space-y-4"
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-lg font-semibold">Mantenedor de Roles</h1>
+          <p className="text-sm text-muted-foreground">
+            Administra los roles del sistema: crea, edita y elimina registros.
+          </p>
+        </div>
+
+        <Button
+          onClick={handleOpenCreate}
+          className="rounded-xl shadow-sm bg-green-700 text-background hover:bg-green-500 transition gap-2"
+        >
+          <Plus className="size-4" />
+          CREAR ROLES
+        </Button>
       </div>
 
       {error ? (
@@ -99,27 +114,29 @@ export default function RolesListView() {
         </div>
       ) : null}
 
-      <RolesDataTable
-        data={rows}
-        isLoading={isLoading}
-        onEdit={handleOpenEdit}
-        onDelete={handleOpenDelete}
-      />
+      <div className="pt-10">
+        <RolesDataTable
+          data={rows}
+          isLoading={isLoading}
+          onEdit={handleOpenEdit}
+          onDelete={handleOpenDelete}
+        />
 
-      <RoleFormDialog
-        open={openForm}
-        mode={formMode}
-        initial={selected}
-        onOpenChange={setOpenForm}
-        onSubmit={handleSubmitForm}
-      />
+        <RoleFormDialog
+          open={openForm}
+          mode={formMode}
+          initial={selected}
+          onOpenChange={setOpenForm}
+          onSubmit={handleSubmitForm}
+        />
 
-      <RoleDeleteDialog
-        open={openDelete}
-        role={selected}
-        onOpenChange={setOpenDelete}
-        onConfirm={handleConfirmDelete}
-      />
-    </div>
+        <RoleDeleteDialog
+          open={openDelete}
+          role={selected}
+          onOpenChange={setOpenDelete}
+          onConfirm={handleConfirmDelete}
+        />
+      </div>
+    </motion.div>
   );
 }

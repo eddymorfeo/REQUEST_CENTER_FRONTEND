@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+import { motion } from "framer-motion";
+import { Plus } from "lucide-react";
 import { usersApi } from "@/api/users/users.api";
 import { rolesApi } from "@/api/role/roles.api";
 import UsersDataTable from "./data-table/data-table";
@@ -8,7 +10,6 @@ import type { UserTableRow } from "./data-table/columns";
 import { Button } from "@/components/ui/button";
 import { UserFormDialog } from "./dialogs/user-form-dialog";
 import { UserDeleteDialog } from "./dialogs/user-delete-dialog";
-import { Card } from "@/components/ui/card";
 
 type RoleOption = { id: string; name: string };
 
@@ -42,7 +43,6 @@ export default function UsersListView() {
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  // dialogs state
   const [openForm, setOpenForm] = React.useState(false);
   const [formMode, setFormMode] = React.useState<"create" | "edit">("create");
   const [selectedUser, setSelectedUser] = React.useState<UserTableRow | null>(null);
@@ -119,7 +119,7 @@ export default function UsersListView() {
         fullName: payload.fullName,
         email: payload.email,
         roleId: payload.roleId,
-        password: payload.password, // opcional
+        password: payload.password,
         isActive: payload.isActive,
       });
     }
@@ -133,22 +133,38 @@ export default function UsersListView() {
   }
 
   return (
-    <div className="space-y-4">
-
-      <Card>
-        <div className="flex items-center justify-between p-5">
-          <h1 className="text-xl font-semibold">Mantenedor de Usuarios</h1>
-          <Button onClick={handleOpenCreate}>+ Crear Usuario</Button>
-        </div>
-      </Card>
-
-      <Card className="p-5">
-        {error ? (
-          <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm">
-            {error}
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.18, ease: "easeOut" }}
+      className="space-y-4"
+    >
+      <div className="">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <h1 className="text-lg font-semibold">Mantenedor de Usuarios</h1>
+            <p className="text-sm text-muted-foreground">
+              Administra usuarios del sistema: crea, edita y elimina registros.
+            </p>
           </div>
-        ) : null}
 
+          <Button
+            onClick={handleOpenCreate}
+            className="rounded-xl shadow-sm bg-green-700 text-background hover:bg-green-500 transition gap-2"
+          >
+            <Plus className="size-4" />
+            CREAR USUARIO
+          </Button>
+        </div>
+      </div>
+
+      {error ? (
+        <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm">
+          {error}
+        </div>
+      ) : null}
+
+      <div className="pt-10">
         <UsersDataTable
           data={rows}
           isLoading={isLoading}
@@ -171,8 +187,7 @@ export default function UsersListView() {
           onOpenChange={setOpenDelete}
           onConfirm={handleConfirmDelete}
         />
-
-      </Card>
-    </div>
+        </div>
+    </motion.div>
   );
 }
