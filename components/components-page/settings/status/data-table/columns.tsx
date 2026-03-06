@@ -75,14 +75,14 @@ export function buildStatusColumns(actions: ColumnActions): ColumnDef<StatusTabl
       id: "terminal",
       accessorKey: "is_terminal",
       header: "Es Terminado?",
-      cell: ({ row }) => <span className="text-sm">{row.original.is_terminal ? "Sí" : "No"}</span>,
+      cell: ({ row }) => <span className="text-sm font-medium">{row.original.is_terminal ? "Sí" : "No"}</span>,
       enableSorting: true,
     },
     {
       id: "active",
       accessorKey: "is_active",
       header: "Activo",
-      cell: ({ row }) => <span className="text-sm">{row.original.is_active ? "Sí" : "No"}</span>,
+      cell: ({ row }) => <span className="text-sm font-medium">{row.original.is_active ? "Sí" : "No"}</span>,
       enableSorting: true,
     },
     {

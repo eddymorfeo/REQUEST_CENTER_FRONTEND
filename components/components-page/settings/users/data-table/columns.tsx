@@ -3,7 +3,6 @@
 import * as React from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { ArrowUpDown, Pencil, Trash2 } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
 import { formatDdMmYyyy } from "@/utils/formatDate";
 
@@ -14,6 +13,7 @@ export type UserTableRow = {
   email: string;
   role_id: string;
   roleName: string;
+  is_active: boolean;
   created_at?: string | null;
   updated_at?: string | null;
 };
@@ -84,6 +84,17 @@ export function buildUserColumns(actions: ColumnActions): ColumnDef<UserTableRow
       accessorFn: (row) => row.roleName ?? "—",
       cell: ({ row }) => (
         <span className="text-sm">{row.original.roleName || "—"}</span>
+      ),
+      enableSorting: true,
+    },
+    {
+      id: "is_active",
+      header: ({ column }) => headerSortable("Activo", column),
+      accessorFn: (row) => (row.is_active ? "SI" : "NO"),
+      cell: ({ row }) => (
+        <span className="text-sm font-medium">
+          {row.original.is_active ? "SI" : "NO"}
+        </span>
       ),
       enableSorting: true,
     },

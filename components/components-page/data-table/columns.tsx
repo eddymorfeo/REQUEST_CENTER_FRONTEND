@@ -10,7 +10,7 @@ import { PriorityBadge } from "@/components/components-page/requests/badge/reque
 import { formatDdMmYyyy } from "@/utils/formatDate";
 
 export type RequestTableRow = RequestItem & {
-  assignee: string; // "Ricardo Yau", "ipfaur", "Sin asignar", etc.
+  assignee: string;
 };
 
 function dateSort(a?: string, b?: string) {

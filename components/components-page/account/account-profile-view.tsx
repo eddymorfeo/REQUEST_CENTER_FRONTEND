@@ -211,7 +211,6 @@ export default function AccountProfileView() {
               label="Usuario"
               htmlFor="username"
               icon={<User2 className="size-4" />}
-              hint="No se puede modificar el username."
             >
               <Input id="username" value={form.username} disabled className="rounded-xl" />
             </Field>
@@ -262,7 +261,6 @@ export default function AccountProfileView() {
                 label="Nueva contraseña"
                 htmlFor="newPassword"
                 icon={<KeyRound className="size-4" />}
-                hint="Deja vacío para no cambiar."
               >
                 <Input
                   id="newPassword"

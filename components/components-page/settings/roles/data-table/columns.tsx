@@ -53,7 +53,7 @@ export function buildRoleColumns(actions: ColumnActions): ColumnDef<RoleTableRow
       id: "active",
       accessorKey: "is_active",
       header: "Activo",
-      cell: ({ row }) => <span className="text-sm">{row.original.is_active ? "Sí" : "No"}</span>,
+      cell: ({ row }) => <span className="text-sm font-medium">{row.original.is_active ? "Sí" : "No"}</span>,
       enableSorting: true,
     },    
     {

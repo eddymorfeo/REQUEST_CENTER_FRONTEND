@@ -32,6 +32,7 @@ function toUserRows(users: any[], roleMap: Record<string, string>): UserTableRow
     email: u.email,
     role_id: u.role_id,
     roleName: roleMap[u.role_id] ?? "—",
+    is_active: Boolean(u.is_active),
     created_at: u.created_at ?? null,
     updated_at: u.updated_at ?? null,
   }));
@@ -150,7 +151,7 @@ export default function UsersListView() {
 
           <Button
             onClick={handleOpenCreate}
-            className="rounded-xl shadow-sm bg-green-700 text-background hover:bg-green-500 transition gap-2"
+            className="rounded-xl shadow-sm bg-emerald-600 text-white hover:bg-emerald-700 active:scale-[0.99] transition"
           >
             <Plus className="size-4" />
             CREAR USUARIO
