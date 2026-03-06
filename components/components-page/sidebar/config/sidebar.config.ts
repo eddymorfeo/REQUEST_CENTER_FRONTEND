@@ -1,7 +1,5 @@
 import type { LucideIcon } from "lucide-react";
 import {
-  BookOpen,
-  Bot,
   HomeIcon,
   Settings2,
   SquareTerminal,
@@ -65,14 +63,5 @@ export const sidebarConfig: SidebarConfig = {
         { title: "Mi cuenta", url: "/account" },
       ],
     },
-    // {
-    //   title: "Configuración",
-    //   url: "#",
-    //   icon: Settings2,
-    //   items: [
-    //     { title: "Usuarios", url: "/settings/users" },
-    //     { title: "Roles", url: "/settings/roles" },
-    //   ],
-    // },
   ],
 };

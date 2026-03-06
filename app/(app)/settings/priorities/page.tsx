@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { buildLoginRedirectUrl, isLoggedIn } from "@/utils/guards/auth.guard";
+import { isAdmin } from "@/utils/guards/role.guard";
 import PrioritiesListView from "@/components/components-page/settings/priorities/priorities-list-view";
 
 export default function PrioritiesPage() {
@@ -12,10 +13,16 @@ export default function PrioritiesPage() {
     if (!isLoggedIn()) {
       const nextPath = window.location.pathname + window.location.search;
       router.replace(buildLoginRedirectUrl(nextPath));
+      return;
+    }
+
+    if (!isAdmin()) {
+      router.replace("/dashboard");
+      return;
     }
   }, [router]);
 
-  if (!isLoggedIn()) return null;
+  if (!isLoggedIn() || !isAdmin()) return null;
 
   return <PrioritiesListView />;
 }

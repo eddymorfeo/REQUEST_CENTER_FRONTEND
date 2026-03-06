@@ -208,7 +208,7 @@ export default function AccountProfileView() {
             </div>
 
             <Field
-              label="Username (solo lectura)"
+              label="Usuario"
               htmlFor="username"
               icon={<User2 className="size-4" />}
               hint="No se puede modificar el username."
