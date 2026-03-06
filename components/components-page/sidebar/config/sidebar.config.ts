@@ -42,6 +42,15 @@ export const sidebarConfig: SidebarConfig = {
       ],
     },
     {
+      title: "Cuenta",
+      url: "/account",
+      icon: User2,
+      isActive: true,
+      items: [
+        { title: "Mi cuenta", url: "/account" },
+      ],
+    },
+        {
       title: "Administración",
       url: "/settings",
       icon: Settings2,
@@ -52,15 +61,6 @@ export const sidebarConfig: SidebarConfig = {
         { title: "Estados", url: "/settings/status" },
         { title: "Grupos", url: "/settings/groups" },
         { title: "Roles", url: "/settings/roles" },
-      ],
-    },
-    {
-      title: "Cuenta",
-      url: "/account",
-      icon: User2,
-      isActive: true,
-      items: [
-        { title: "Mi cuenta", url: "/account" },
       ],
     },
   ],
