@@ -38,7 +38,6 @@ export const sidebarConfig: SidebarConfig = {
       isActive: true,
       items: [
         { title: "Lista", url: "/requests?view=list" },
-        { title: "Tablero", url: "/requests?view=board" },
       ],
     },
     {
