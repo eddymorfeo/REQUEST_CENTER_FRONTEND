@@ -3,9 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "dev": "set NEXT_DIST_DIR=.next-dev&& next dev -H 0.0.0.0 -p 3005",
+    "build": "set NEXT_DIST_DIR=.next-prod&& next build",
+    "build:prod": "set NEXT_DIST_DIR=.next-prod&& next build",
+    "start": "set NEXT_DIST_DIR=.next-prod&& next start -H 0.0.0.0 -p 3000",
+    "start:prod": "set NEXT_DIST_DIR=.next-prod&& next start -H 0.0.0.0 -p 3000",
+    "start:dev": "set NEXT_DIST_DIR=.next-dev&& next dev -H 0.0.0.0 -p 3005",
     "lint": "eslint"
   },
   "dependencies": {

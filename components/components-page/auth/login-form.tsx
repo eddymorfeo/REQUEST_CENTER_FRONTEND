@@ -6,9 +6,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "framer-motion";
 import { Eye, EyeOff, Lock, LogIn, User, Loader2 } from "lucide-react";
 
-import { loginSchemaData, type LoginSchemaData } from "@/schemas/auth/login.schema";
+import {
+  loginSchemaData,
+  type LoginSchemaData,
+} from "@/schemas/auth/login.schema";
 import { useAuth } from "@/hooks/auth/useAuth";
 import { alerts } from "@/utils/alerts/alerts";
+import { showErrorAlert } from "@/lib/feedback/show-error-alert";
+import { logError } from "@/lib/errors/log-error";
 
 function LoginSkeleton() {
   return (
@@ -37,23 +42,23 @@ export default function LoginForm() {
     mode: "onBlur",
   });
 
-  // ✅ Mostrar alerta si venimos por token expirado
   React.useEffect(() => {
     const url = new URL(window.location.href);
     const reason = url.searchParams.get("reason");
 
     if (reason === "expired") {
-      // evita repetir
       url.searchParams.delete("reason");
       window.history.replaceState({}, "", url.pathname + url.search);
 
-      void alerts.error("Sesión expirada", "Tu sesión expiró. Inicia sesión nuevamente.");
+      void alerts.error(
+        "Sesión expirada",
+        "Tu sesión expiró. Inicia sesión nuevamente."
+      );
     }
   }, []);
 
   React.useEffect(() => {
     if (!isBootstrapping && isAuthenticated) {
-      // Si existe next=..., vuelve ahí. Si no, dashboard.
       const url = new URL(window.location.href);
       const next = url.searchParams.get("next");
       window.location.href = next ? next : "/dashboard";
@@ -61,14 +66,13 @@ export default function LoginForm() {
   }, [isBootstrapping, isAuthenticated]);
 
   const onSubmit = form.handleSubmit(async (values) => {
+    setIsSubmitting(true);
+
     try {
-      setIsSubmitting(true);
       await login(values);
-    } catch (e: any) {
-      await alerts.error(
-        "No se pudo iniciar sesión",
-        e?.message ?? "Verifica tus credenciales."
-      );
+    } catch (error: unknown) {
+      logError("LOGIN_FORM_SUBMIT", error);
+      await showErrorAlert("No se pudo iniciar sesión", error);
     } finally {
       setIsSubmitting(false);
     }
@@ -76,14 +80,17 @@ export default function LoginForm() {
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
-      <div className="hidden lg:flex relative bg-gradient-to-br from-neutral-950 to-neutral-800 text-white">
-        <div className="absolute inset-0 opacity-20 [background-image:radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] [background-size:18px_18px]" />
+      <div className="hidden lg:flex relative bg-linear-to-br from-neutral-950 to-neutral-800 text-white">
+        <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] bg-size-[18px_18px]" />
+
         <div className="relative p-10 flex flex-col gap-6 w-full">
           <div className="flex items-center gap-2">
             <div className="size-10 rounded-2xl bg-white/10 grid place-items-center">
               <LogIn className="size-5" />
             </div>
-            <div className="font-semibold tracking-tight text-lg">Request Center</div>
+            <div className="font-semibold tracking-tight text-lg">
+              Request Center
+            </div>
           </div>
 
           <div className="mt-auto max-w-md">
@@ -91,7 +98,8 @@ export default function LoginForm() {
               Sistema de gestión de solicitudes.
             </h1>
             <p className="mt-3 text-white/70">
-              Registro de solicitudes, asignación, seguimiento y estadísticas de gestión.
+              Registro de solicitudes, asignación, seguimiento y estadísticas de
+              gestión.
             </p>
           </div>
         </div>
@@ -109,7 +117,9 @@ export default function LoginForm() {
           ) : (
             <>
               <div className="mb-6">
-                <h2 className="text-2xl font-semibold tracking-tight">Iniciar sesión</h2>
+                <h2 className="text-2xl font-semibold tracking-tight">
+                  Iniciar sesión
+                </h2>
                 <p className="text-sm text-muted-foreground mt-1">
                   Ingresa tus credenciales para acceder.
                 </p>
@@ -128,6 +138,7 @@ export default function LoginForm() {
                       aria-invalid={Boolean(form.formState.errors.username)}
                     />
                   </div>
+
                   {form.formState.errors.username?.message && (
                     <p className="mt-1 text-xs text-red-600">
                       {form.formState.errors.username.message}
@@ -151,12 +162,21 @@ export default function LoginForm() {
                     <button
                       type="button"
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition"
-                      onClick={() => setShowPassword((v) => !v)}
-                      aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                      onClick={() => setShowPassword((value) => !value)}
+                      aria-label={
+                        showPassword
+                          ? "Ocultar contraseña"
+                          : "Mostrar contraseña"
+                      }
                     >
-                      {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                      {showPassword ? (
+                        <EyeOff className="size-4" />
+                      ) : (
+                        <Eye className="size-4" />
+                      )}
                     </button>
                   </div>
+
                   {form.formState.errors.password?.message && (
                     <p className="mt-1 text-xs text-red-600">
                       {form.formState.errors.password.message}

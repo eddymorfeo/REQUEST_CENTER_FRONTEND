@@ -19,7 +19,7 @@ export type UpdateRequestStatusPayload = {
 
 export type RequestStatusDetailResponse = {
   success: boolean;
-  data: any;
+  data: unknown ;
 };
 
 export const requestStatusApi = {
@@ -40,7 +40,7 @@ export const requestStatusApi = {
   },
 
   create(payload: CreateRequestStatusPayload) {
-    return http<{ success: boolean; data: any }>({
+    return http<{ success: boolean; data: unknown  }>({
       method: "POST",
       path: "/request-status",
       body: payload,
@@ -49,7 +49,7 @@ export const requestStatusApi = {
   },
 
   update(id: string, payload: UpdateRequestStatusPayload) {
-    return http<{ success: boolean; data: any }>({
+    return http<{ success: boolean; data: unknown  }>({
       method: "PUT",
       path: `/request-status/${id}`,
       body: payload,

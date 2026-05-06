@@ -46,7 +46,7 @@ export const requestsApi = {
   },
 
   createRequest(payload: CreateRequestPayload) {
-    return http<{ success: boolean; data?: any }>({
+    return http<{ success: boolean; data?: RequestItem }>({
       method: "POST",
       path: "/requests",
       body: payload,

@@ -1,4 +1,5 @@
 import { ApiError } from "./http.errors";
+import { mapHttpError, mapNetworkError } from "./http.error-mapper";
 import { tokenStorage } from "@/utils/storage/token.storage";
 
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -11,6 +12,14 @@ type RequestOptions = {
   signal?: AbortSignal;
 };
 
+type ErrorPayload = {
+  success?: boolean;
+  code?: string;
+  message?: string;
+  error?: string;
+  details?: unknown;
+} | null;
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 if (!API_URL) {
@@ -21,10 +30,18 @@ function isBrowser() {
   return typeof window !== "undefined";
 }
 
-function shouldLogout(resStatus: number, payload: any) {
+function shouldLogout(resStatus: number, payload: ErrorPayload): boolean {
   if (resStatus === 401) return true;
-  const msg = (payload?.message || payload?.error || "").toString().toLowerCase();
-  return msg.includes("invalid token") || msg.includes("jwt") || msg.includes("token");
+
+  const msg = (payload?.message || payload?.error || "")
+    .toString()
+    .toLowerCase();
+
+  return (
+    msg.includes("invalid token") ||
+    msg.includes("jwt") ||
+    msg.includes("token")
+  );
 }
 
 function redirectToLoginBecauseExpired() {
@@ -32,8 +49,8 @@ function redirectToLoginBecauseExpired() {
 
   const key = "rc_auth_expired_redirecting";
   if (sessionStorage.getItem(key) === "1") return;
-  sessionStorage.setItem(key, "1");
 
+  sessionStorage.setItem(key, "1");
   tokenStorage.clear();
 
   const nextPath = window.location.pathname + window.location.search;
@@ -54,28 +71,35 @@ export async function http<T>(options: RequestOptions): Promise<T> {
     if (token) headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${API_URL}${path}`, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-    signal,
-  });
+  try {
+    const res = await fetch(`${API_URL}${path}`, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+      signal,
+    });
 
-  const isJson = res.headers.get("content-type")?.includes("application/json");
-  const payload = isJson ? await res.json() : null;
+    const isJson = res.headers.get("content-type")?.includes("application/json");
+    const payload: ErrorPayload = isJson ? await res.json() : null;
 
-  if (!res.ok) {
-    if (auth && shouldLogout(res.status, payload)) {
-      redirectToLoginBecauseExpired();
+    if (!res.ok) {
+      if (auth && shouldLogout(res.status, payload)) {
+        redirectToLoginBecauseExpired();
+      }
+
+      throw mapHttpError(
+        res.status,
+        payload ?? undefined,
+        `Error HTTP ${res.status} al consumir ${path}`
+      );
     }
 
-    const msg =
-      payload?.message ||
-      payload?.error ||
-      `Error HTTP ${res.status} al consumir ${path}`;
+    return payload as T;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
 
-    throw new ApiError(msg, res.status, payload);
+    throw mapNetworkError(error);
   }
-
-  return payload as T;
 }
