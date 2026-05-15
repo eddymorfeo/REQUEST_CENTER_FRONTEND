@@ -2,13 +2,22 @@
 
 import * as React from "react";
 import { useParams, useRouter } from "next/navigation";
+import { Download, Paperclip, Trash2 } from "lucide-react";
 
 import { useAuth } from "@/hooks/auth/useAuth";
 import { alerts } from "@/utils/alerts/alerts";
+import { getErrorMessage } from "@/lib/errors/get-error-message";
 
 import { requestsApi } from "@/api/requests/requests.api";
 import { boardApi } from "@/api/requests/board.api";
-import { requestAssignmentsApi } from "@/api/requests/request-assignments.api";
+import {
+  requestAssignmentsApi,
+  type RequestAssignmentItem,
+} from "@/api/requests/request-assignments.api";
+import {
+  requestAttachmentsApi,
+  type RequestAttachmentItem,
+} from "@/api/requests/request-attachments.api";
 import { usersApi, type UserItem } from "@/api/users/users.api";
 import { requestStatusApi } from "@/api/requests/request-status.api";
 
@@ -27,8 +36,8 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { RequestAttachmentsPanel } from "./request-attachments-panel";
+import { RequestObservationsPanel } from "./request-observations-panel";
+import { RequestStatusHistoryPanel } from "./request-status-history-panel";
 import { StatusBadge } from "./badge/request-status-badge";
 import { PriorityBadge } from "./badge/request-priority-badge";
 
@@ -42,18 +51,7 @@ function findPrevNext(statuses: RequestStatus[], currentId: string) {
   };
 }
 
-type AssignmentItem = {
-  id: string;
-  request_id: string;
-  assigned_to: string | null;
-  assigned_by: string;
-  assigned_at: string;
-  unassigned_at: string | null;
-  note: string | null;
-  is_active: boolean;
-};
-
-function pickCurrentAssigneeId(assignments: AssignmentItem[]): string | null {
+function pickCurrentAssigneeId(assignments: RequestAssignmentItem[]): string | null {
   const active = assignments.filter(
     (a) => a.is_active && (a.unassigned_at === null || a.unassigned_at === undefined)
   );
@@ -68,6 +66,26 @@ function pickCurrentAssigneeId(assignments: AssignmentItem[]): string | null {
   return active[0].assigned_to ?? null;
 }
 
+function normalizeFiles(files: FileList | null): File[] {
+  if (!files) return [];
+  return Array.from(files);
+}
+
+function formatBytes(bytes: number) {
+  if (!bytes) return "-";
+
+  const units = ["B", "KB", "MB", "GB"];
+  let size = bytes;
+  let idx = 0;
+
+  while (size >= 1024 && idx < units.length - 1) {
+    size /= 1024;
+    idx++;
+  }
+
+  return `${size.toFixed(idx === 0 ? 0 : 1)} ${units[idx]}`;
+}
+
 export function RequestDetailPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
@@ -78,16 +96,22 @@ export function RequestDetailPage() {
 
   const [isLoading, setIsLoading] = React.useState(true);
   const [isDeleting, setIsDeleting] = React.useState(false);
+  const [isSavingChanges, setIsSavingChanges] = React.useState(false);
 
   const [request, setRequest] = React.useState<RequestItem | null>(null);
   const [statuses, setStatuses] = React.useState<RequestStatus[]>([]);
   const [users, setUsers] = React.useState<UserItem[]>([]);
   const [assigneeId, setAssigneeId] = React.useState<string | null>(null);
+  const [attachments, setAttachments] = React.useState<RequestAttachmentItem[]>([]);
+  const [selectedFiles, setSelectedFiles] = React.useState<File[]>([]);
+  const [downloadingAttachmentId, setDownloadingAttachmentId] = React.useState<string | null>(null);
+  const [statusHistoryRefreshKey, setStatusHistoryRefreshKey] = React.useState(0);
 
   const [title, setTitle] = React.useState("");
   const [description, setDescription] = React.useState("");
 
   const [selectedAssignee, setSelectedAssignee] = React.useState<string>("");
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const assigneeUser = React.useMemo(
     () => users.find((u) => u.id === assigneeId) ?? null,
@@ -102,8 +126,20 @@ export function RequestDetailPage() {
 
   const loadAssignments = React.useCallback(async () => {
     const asgRes = await requestAssignmentsApi.listByRequestId(requestId);
-    const current = pickCurrentAssigneeId((asgRes.data ?? []) as AssignmentItem[]);
+    const current = pickCurrentAssigneeId(asgRes.data ?? []);
     setAssigneeId(current);
+  }, [requestId]);
+
+  const loadAttachments = React.useCallback(async () => {
+    const res = await requestAttachmentsApi.listByRequestId(requestId);
+    const list = (res.data ?? [])
+      .filter((attachment) => attachment.is_active !== false)
+      .sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+
+    setAttachments(list);
   }, [requestId]);
 
   const load = React.useCallback(async () => {
@@ -127,17 +163,17 @@ export function RequestDetailPage() {
 
       setUsers((usersRes.items ?? []).filter((u) => u.is_active));
 
-      await loadAssignments();
-    } catch (e: any) {
+      await Promise.all([loadAssignments(), loadAttachments()]);
+    } catch (error: unknown) {
       await alerts.error(
         "No se pudo cargar el detalle",
-        e?.message ?? "Intenta nuevamente."
+        getErrorMessage(error)
       );
       setRequest(null);
     } finally {
       setIsLoading(false);
     }
-  }, [requestId, loadAssignments]);
+  }, [requestId, loadAssignments, loadAttachments]);
 
   React.useEffect(() => {
     void load();
@@ -158,10 +194,31 @@ export function RequestDetailPage() {
       await boardApi.assignRequest(request.id, selectedAssignee);
       await loadAssignments();
       setSelectedAssignee("");
+      setStatusHistoryRefreshKey((current) => current + 1);
       await alerts.toastSuccess("Solicitud asignada");
-    } catch (e: any) {
-      await alerts.error("No se pudo asignar", e?.message ?? "Intenta nuevamente.");
+    } catch (error: unknown) {
+      await alerts.error("No se pudo asignar", getErrorMessage(error));
     }
+  };
+
+  const uploadSelectedFiles = async (requestToUpdate: RequestItem) => {
+    if (selectedFiles.length === 0) return [];
+
+    const failed: string[] = [];
+
+    for (const file of selectedFiles) {
+      try {
+        await requestAttachmentsApi.upload({
+          requestId: requestToUpdate.id,
+          title: title.trim() || requestToUpdate.title || "request",
+          file,
+        });
+      } catch {
+        failed.push(file.name);
+      }
+    }
+
+    return failed;
   };
 
   const onSave = async () => {
@@ -176,11 +233,74 @@ export function RequestDetailPage() {
     if (!ok) return;
 
     try {
+      setIsSavingChanges(true);
       await requestsApi.updateRequest(request.id, { title, description });
       setRequest({ ...request, title, description });
-      await alerts.toastSuccess("Cambios guardados");
-    } catch (e: any) {
-      await alerts.error("No se pudo guardar", e?.message ?? "Intenta nuevamente.");
+
+      const failedUploads = await uploadSelectedFiles(request);
+
+      if (selectedFiles.length > 0) {
+        await loadAttachments();
+        setSelectedFiles([]);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      }
+
+      if (failedUploads.length > 0) {
+        await alerts.error(
+          "Cambios guardados, pero adjuntos incompletos",
+          `No se pudieron subir: ${failedUploads.join(", ")}`
+        );
+      } else {
+        await alerts.toastSuccess("Cambios guardados");
+      }
+    } catch (error: unknown) {
+      await alerts.error("No se pudo guardar", getErrorMessage(error));
+    } finally {
+      setIsSavingChanges(false);
+    }
+  };
+
+  const onDownloadAttachment = async (attachment: RequestAttachmentItem) => {
+    try {
+      setDownloadingAttachmentId(attachment.id);
+
+      const { blob, filename } = await requestAttachmentsApi.download(attachment.id);
+      const url = window.URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = filename || attachment.file_name;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.URL.revokeObjectURL(url);
+
+      await alerts.toastSuccess("Descarga iniciada");
+    } catch (error: unknown) {
+      await alerts.error("No se pudo descargar", getErrorMessage(error));
+    } finally {
+      setDownloadingAttachmentId(null);
+    }
+  };
+
+  const onDeleteAttachment = async (attachment: RequestAttachmentItem) => {
+    if (!isAdmin) {
+      await alerts.error("Acción no permitida", "Solo ADMIN puede eliminar adjuntos por ahora.");
+      return;
+    }
+
+    const ok = await alerts.confirm(
+      "Eliminar adjunto",
+      `¿Desactivar "${attachment.file_name}"?`
+    );
+    if (!ok) return;
+
+    try {
+      await requestAttachmentsApi.delete(attachment.id);
+      await alerts.toastSuccess("Adjunto eliminado");
+      await loadAttachments();
+    } catch (error: unknown) {
+      await alerts.error("No se pudo eliminar el adjunto", getErrorMessage(error));
+      await loadAttachments();
     }
   };
 
@@ -217,10 +337,11 @@ export function RequestDetailPage() {
 
       const reqRes = await requestsApi.getById(request.id);
       setRequest(reqRes.data);
+      setStatusHistoryRefreshKey((current) => current + 1);
 
       await alerts.toastSuccess("Estado actualizado");
-    } catch (e: any) {
-      await alerts.error("No se pudo cambiar el estado", e?.message ?? "Intenta nuevamente.");
+    } catch (error: unknown) {
+      await alerts.error("No se pudo cambiar el estado", getErrorMessage(error));
     }
   };
 
@@ -252,10 +373,10 @@ export function RequestDetailPage() {
 
       router.push("/requests?view=board");
       router.refresh();
-    } catch (e: any) {
+    } catch (error: unknown) {
       await alerts.error(
         "No se pudo eliminar la solicitud",
-        e?.message ?? "Intenta nuevamente."
+        getErrorMessage(error)
       );
     } finally {
       setIsDeleting(false);
@@ -266,6 +387,7 @@ export function RequestDetailPage() {
   if (!request) return <div className="p-4 text-sm text-muted-foreground">No se encontró la solicitud.</div>;
 
   const { current, prev, next } = findPrevNext(statuses, request.status_id);
+  const isBusy = isDeleting || isSavingChanges;
 
   return (
     <div className="p-4 space-y-4">
@@ -299,7 +421,7 @@ export function RequestDetailPage() {
               <Input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                disabled={!canEdit || isDeleting}
+                disabled={!canEdit || isBusy}
                 className="text-base font-semibold"
               />
               <p className="mt-1 text-xs text-muted-foreground">
@@ -316,17 +438,92 @@ export function RequestDetailPage() {
           <Textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            disabled={!canEdit || isDeleting}
-            className="min-h-[140px]"
+            disabled={!canEdit || isBusy}
+            className="min-h-35"
             placeholder="Descripción…"
           />
 
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm font-medium">
+              <Paperclip className="size-4" />
+              Adjuntar archivos (opcional)
+            </label>
+            <Input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              disabled={!canEdit || isBusy}
+              onChange={(event) => setSelectedFiles(normalizeFiles(event.target.files))}
+            />
+            {selectedFiles.length > 0 ? (
+              <p className="text-xs text-muted-foreground">
+                {selectedFiles.length} archivo(s) seleccionado(s):{" "}
+                <span className="font-medium">
+                  {selectedFiles.map((file) => file.name).join(", ")}
+                </span>
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Los archivos seleccionados se subirán al guardar cambios.
+              </p>
+            )}
+
+            {attachments.length > 0 ? (
+              <div className="space-y-2 pt-1">
+                {attachments.map((attachment) => (
+                  <div
+                    key={attachment.id}
+                    className="flex flex-col gap-2 rounded-xl border p-3 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-medium">
+                        {attachment.file_name}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {attachment.mime_type} · {formatBytes(Number(attachment.size_bytes))} ·{" "}
+                        {new Date(attachment.created_at).toLocaleString()}
+                      </div>
+                    </div>
+
+                    <div className="flex shrink-0 gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onDownloadAttachment(attachment)}
+                        disabled={downloadingAttachmentId === attachment.id}
+                      >
+                        <Download className="size-4" />
+                        {downloadingAttachmentId === attachment.id ? "Descargando..." : "Descargar"}
+                      </Button>
+
+                      {isAdmin ? (
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => onDeleteAttachment(attachment)}
+                          disabled={isBusy}
+                        >
+                          <Trash2 className="size-4" />
+                          Eliminar
+                        </Button>
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">No hay adjuntos.</p>
+            )}
+          </div>
+
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={load} disabled={isDeleting}>
+            <Button variant="outline" onClick={load} disabled={isBusy}>
               Recargar
             </Button>
-            <Button onClick={onSave} disabled={!canEdit || isDeleting}>
-              Guardar cambios
+            <Button onClick={onSave} disabled={!canEdit || isBusy}>
+              {isSavingChanges ? "Guardando..." : "Guardar cambios"}
             </Button>
           </div>
 
@@ -417,7 +614,11 @@ export function RequestDetailPage() {
           </div>
         </Card>
       </div>
-      <RequestAttachmentsPanel requestId={request.id} requestTitle={request.title} />
+      <RequestObservationsPanel requestId={request.id} disabled={isDeleting} />
+      <RequestStatusHistoryPanel
+        requestId={request.id}
+        refreshKey={statusHistoryRefreshKey}
+      />
     </div>
   );
 }
