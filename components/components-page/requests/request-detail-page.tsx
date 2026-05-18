@@ -2,7 +2,21 @@
 
 import * as React from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Download, Paperclip, Trash2 } from "lucide-react";
+import {
+  CalendarDays,
+  Circle,
+  CloudUpload,
+  Download,
+  File,
+  FileArchive,
+  FileImage,
+  FileSpreadsheet,
+  FileText,
+  Paperclip,
+  Trash2,
+  UserRound,
+  X,
+} from "lucide-react";
 
 import { useAuth } from "@/hooks/auth/useAuth";
 import { alerts } from "@/utils/alerts/alerts";
@@ -66,6 +80,10 @@ function pickCurrentAssigneeId(assignments: RequestAssignmentItem[]): string | n
   return active[0].assigned_to ?? null;
 }
 
+function isAdminRole(roleCode?: string | null) {
+  return roleCode === "ADMIN" || roleCode === "ADMINISTRADOR";
+}
+
 function normalizeFiles(files: FileList | null): File[] {
   if (!files) return [];
   return Array.from(files);
@@ -86,13 +104,101 @@ function formatBytes(bytes: number) {
   return `${size.toFixed(idx === 0 ? 0 : 1)} ${units[idx]}`;
 }
 
+function formatDetailDate(value?: string | null) {
+  if (!value) return "-";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+
+  return new Intl.DateTimeFormat("es-CL", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+type AttachmentVisualInput = {
+  file_name: string;
+  mime_type?: string | null;
+};
+
+function getAttachmentVisual(file: AttachmentVisualInput) {
+  const mimeType = (file.mime_type ?? "").toLowerCase();
+  const fileName = file.file_name.toLowerCase();
+
+  if (mimeType.startsWith("image/")) {
+    return {
+      icon: FileImage,
+      className: "bg-blue-50 text-blue-700",
+    };
+  }
+
+  if (mimeType.includes("pdf") || fileName.endsWith(".pdf")) {
+    return {
+      icon: FileText,
+      className: "bg-red-50 text-red-700",
+    };
+  }
+
+  if (
+    mimeType.includes("spreadsheet") ||
+    mimeType.includes("excel") ||
+    fileName.endsWith(".xls") ||
+    fileName.endsWith(".xlsx") ||
+    fileName.endsWith(".csv")
+  ) {
+    return {
+      icon: FileSpreadsheet,
+      className: "bg-emerald-50 text-emerald-700",
+    };
+  }
+
+  if (
+    mimeType.includes("zip") ||
+    mimeType.includes("compressed") ||
+    fileName.endsWith(".zip") ||
+    fileName.endsWith(".rar") ||
+    fileName.endsWith(".7z")
+  ) {
+    return {
+      icon: FileArchive,
+      className: "bg-amber-50 text-amber-700",
+    };
+  }
+
+  if (mimeType.startsWith("text/") || fileName.endsWith(".doc") || fileName.endsWith(".docx")) {
+    return {
+      icon: FileText,
+      className: "bg-indigo-50 text-indigo-700",
+    };
+  }
+
+  return {
+    icon: File,
+    className: "bg-muted text-muted-foreground",
+  };
+}
+
+function removeSelectedFile(files: File[], fileToRemove: File) {
+  return files.filter(
+    (file) =>
+      !(
+        file.name === fileToRemove.name &&
+        file.size === fileToRemove.size &&
+        file.lastModified === fileToRemove.lastModified
+      )
+  );
+}
+
 export function RequestDetailPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const requestId = params.id;
 
   const { user } = useAuth();
-  const isAdmin = user?.roleCode === "ADMIN";
+  const isAdmin = isAdminRole(user?.roleCode);
 
   const [isLoading, setIsLoading] = React.useState(true);
   const [isDeleting, setIsDeleting] = React.useState(false);
@@ -123,6 +229,8 @@ export function RequestDetailPage() {
     if (isAdmin) return true;
     return Boolean(assigneeId && assigneeId === user.id);
   }, [user, isAdmin, assigneeId, request]);
+
+  const canAttachRequestFiles = canEdit;
 
   const loadAssignments = React.useCallback(async () => {
     const asgRes = await requestAssignmentsApi.listByRequestId(requestId);
@@ -304,6 +412,16 @@ export function RequestDetailPage() {
     }
   };
 
+  const onSelectFiles = (files: FileList | null) => {
+    setSelectedFiles(normalizeFiles(files));
+  };
+
+  const onDropFiles = (event: React.DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    if (!canAttachRequestFiles || isBusy) return;
+    setSelectedFiles(normalizeFiles(event.dataTransfer.files));
+  };
+
   const onChangeStatus = async (toStatusId: string) => {
     if (!request) return;
 
@@ -416,72 +534,152 @@ export function RequestDetailPage() {
 
       <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
         <Card className="p-4 rounded-2xl space-y-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0 w-full">
+          <div className="flex items-end justify-between gap-3">
+            <div className="min-w-0 w-full space-y-2">
+              <label className="text-sm font-medium">Título de la solicitud</label>
               <Input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 disabled={!canEdit || isBusy}
-                className="text-base font-semibold"
+                className="font-medium"
               />
-              <p className="mt-1 text-xs text-muted-foreground">
-                {canEdit ? "Puedes editar esta solicitud." : "Solo lectura."}
-              </p>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex shrink-0 gap-2 pb-0.5">
               <StatusBadge value={current?.name ?? request.status_name ?? "—"} />
               {request.priority_name ? <PriorityBadge value={request.priority_name} /> : null}
             </div>
           </div>
 
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Descripción</label>
           <Textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             disabled={!canEdit || isBusy}
-            className="min-h-35"
+            className="min-h-[112px]"
             placeholder="Descripción…"
           />
+          </div>
 
           <div className="space-y-2">
-            <label className="flex items-center gap-2 text-sm font-medium">
-              <Paperclip className="size-4" />
+            <label className="text-sm font-medium">
               Adjuntar archivos (opcional)
             </label>
-            <Input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              disabled={!canEdit || isBusy}
-              onChange={(event) => setSelectedFiles(normalizeFiles(event.target.files))}
-            />
-            {selectedFiles.length > 0 ? (
-              <p className="text-xs text-muted-foreground">
-                {selectedFiles.length} archivo(s) seleccionado(s):{" "}
-                <span className="font-medium">
-                  {selectedFiles.map((file) => file.name).join(", ")}
+            {canAttachRequestFiles ? (
+              <label
+                className="flex cursor-pointer flex-col gap-3 rounded-xl border border-dashed p-4 sm:flex-row sm:items-center sm:justify-between"
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={onDropFiles}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  className="sr-only"
+                  disabled={isBusy}
+                  onChange={(event) => onSelectFiles(event.target.files)}
+                />
+
+                <div className="flex items-center gap-3">
+                  <div className="flex size-9 items-center justify-center rounded-full bg-blue-50 text-blue-700">
+                    <CloudUpload className="size-5" />
+                  </div>
+                  <div>
+                    <div className="text-sm">
+                      Arrastra y suelta archivos aquí o{" "}
+                      <span className="font-medium underline-offset-2 hover:underline">
+                        selecciona
+                      </span>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Se subirán al guardar cambios.
+                    </div>
+                  </div>
+                </div>
+
+                <span className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border bg-background px-3 text-sm font-medium shadow-xs">
+                  <Paperclip className="size-4" />
+                  Seleccionar archivos
                 </span>
-              </p>
+              </label>
             ) : (
               <p className="text-xs text-muted-foreground">
-                Los archivos seleccionados se subirán al guardar cambios.
+                Solo el usuario asignado o ADMINISTRADOR puede adjuntar documentos a la solicitud.
               </p>
             )}
+            {selectedFiles.length > 0 ? (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {selectedFiles.map((file) => {
+                  const attachmentVisual = getAttachmentVisual({
+                    file_name: file.name,
+                    mime_type: file.type,
+                  });
+                  const AttachmentIcon = attachmentVisual.icon;
+
+                  return (
+                    <div
+                      key={`${file.name}-${file.size}-${file.lastModified}`}
+                      className="inline-flex max-w-full items-center gap-2 rounded-md border bg-background px-2 py-1 text-xs shadow-xs"
+                    >
+                      <span
+                        className={`flex size-6 shrink-0 items-center justify-center rounded ${attachmentVisual.className}`}
+                      >
+                        <AttachmentIcon className="size-3.5" />
+                      </span>
+                      <span className="max-w-[260px] truncate font-medium">
+                        {file.name}
+                      </span>
+                      <span className="shrink-0 text-muted-foreground">
+                        {formatBytes(file.size)}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-xs"
+                        className="-mr-1"
+                        aria-label={`Quitar ${file.name}`}
+                        onClick={() => {
+                          setSelectedFiles((currentFiles) =>
+                            removeSelectedFile(currentFiles, file)
+                          );
+                          if (fileInputRef.current) fileInputRef.current.value = "";
+                        }}
+                        disabled={isBusy}
+                      >
+                        <X className="size-3" />
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
 
             {attachments.length > 0 ? (
               <div className="space-y-2 pt-1">
-                {attachments.map((attachment) => (
+                {attachments.map((attachment) => {
+                  const attachmentVisual = getAttachmentVisual(attachment);
+                  const AttachmentIcon = attachmentVisual.icon;
+
+                  return (
                   <div
                     key={attachment.id}
-                    className="flex flex-col gap-2 rounded-xl border p-3 sm:flex-row sm:items-center sm:justify-between"
+                    className="grid gap-3 rounded-xl border bg-background p-3 shadow-xs sm:grid-cols-[1fr_auto] sm:items-center"
                   >
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-medium">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div
+                        className={`flex size-9 shrink-0 items-center justify-center rounded-md ${attachmentVisual.className}`}
+                      >
+                        <AttachmentIcon className="size-5" />
+                      </div>
+                      <div className="min-w-0">
+                      <div className="truncate text-sm font-semibold leading-5">
                         {attachment.file_name}
                       </div>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="mt-1 text-xs text-muted-foreground">
                         {attachment.mime_type} · {formatBytes(Number(attachment.size_bytes))} ·{" "}
-                        {new Date(attachment.created_at).toLocaleString()}
+                        {formatDetailDate(attachment.created_at)}
+                      </div>
                       </div>
                     </div>
 
@@ -500,46 +698,58 @@ export function RequestDetailPage() {
                       {isAdmin ? (
                         <Button
                           type="button"
-                          variant="destructive"
-                          size="sm"
+                          variant="ghost"
+                          size="icon-sm"
                           onClick={() => onDeleteAttachment(attachment)}
                           disabled={isBusy}
+                          aria-label={`Eliminar ${attachment.file_name}`}
+                          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                         >
                           <Trash2 className="size-4" />
-                          Eliminar
                         </Button>
                       ) : null}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
-              <p className="text-xs text-muted-foreground">No hay adjuntos.</p>
+              <div className="rounded-xl border border-dashed p-3 text-xs text-muted-foreground">
+                No hay adjuntos.
+              </div>
             )}
           </div>
 
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={load} disabled={isBusy}>
-              Recargar
-            </Button>
-            <Button onClick={onSave} disabled={!canEdit || isBusy}>
-              {isSavingChanges ? "Guardando..." : "Guardar cambios"}
-            </Button>
-          </div>
-
           <Separator />
-          <div className="text-xs text-muted-foreground">
-            Tipo: <b>{request.type_name ?? "—"}</b>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-xs text-muted-foreground">
+              Tipo: <b>{request.type_name ?? "—"}</b>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={load} disabled={isBusy}>
+                Recargar
+              </Button>
+              <Button onClick={onSave} disabled={!canEdit || isBusy}>
+                {isSavingChanges ? "Guardando..." : "Guardar cambios"}
+              </Button>
+            </div>
           </div>
         </Card>
 
         <Card className="p-4 rounded-2xl space-y-4">
-          <div className="space-y-2">
-            <div className="text-sm font-semibold">Asignación</div>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <UserRound className="size-4" />
+              Asignación
+            </div>
 
-            <div className="text-sm">
-              Asignado a:{" "}
-              <b>{assigneeUser ? assigneeUser.full_name : "Sin asignar"}</b>
+            <div className="space-y-1 text-sm">
+              <div className="text-xs font-medium text-muted-foreground">Asignado a</div>
+              <div className="font-semibold">
+                {assigneeUser ? assigneeUser.full_name : "Sin asignar"}
+              </div>
               {assigneeUser?.email ? (
                 <div className="text-xs text-muted-foreground">{assigneeUser.email}</div>
               ) : null}
@@ -550,10 +760,10 @@ export function RequestDetailPage() {
                 <Select
                   value={selectedAssignee}
                   onValueChange={setSelectedAssignee}
-                  disabled={isDeleting}
+                  disabled={isBusy}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar usuario" />
+                    <SelectValue placeholder="Cambiar asignación" />
                   </SelectTrigger>
                   <SelectContent>
                     {users.map((u) => (
@@ -567,22 +777,22 @@ export function RequestDetailPage() {
                 <Button
                   className="w-full"
                   onClick={onAssign}
-                  disabled={!selectedAssignee || isDeleting}
+                  disabled={!selectedAssignee || isBusy}
                 >
                   Asignar
                 </Button>
-
-                <p className="text-xs text-muted-foreground">
-                  Solo ADMIN puede asignar solicitudes.
-                </p>
               </div>
             ) : null}
           </div>
 
           <Separator />
 
-          <div className="space-y-2">
-            <div className="text-sm font-semibold">Estado</div>
+          <div className="space-y-3">
+            <div className="text-sm font-semibold">Estado actual</div>
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <Circle className="size-3 fill-amber-400 text-amber-400" />
+              {current?.name ?? request.status_name ?? "Sin estado"}
+            </div>
             <div className="text-xs text-muted-foreground">
               Solo se permite avanzar/retroceder 1 estado.
             </div>
@@ -591,7 +801,7 @@ export function RequestDetailPage() {
               <Button
                 variant="outline"
                 className="flex-1"
-                disabled={!prev || !canEdit || isDeleting}
+                disabled={!prev || !canEdit || isBusy}
                 onClick={() => prev && onChangeStatus(prev.id)}
               >
                 Retroceder
@@ -599,7 +809,7 @@ export function RequestDetailPage() {
 
               <Button
                 className="flex-1"
-                disabled={!next || !canEdit || isDeleting}
+                disabled={!next || !canEdit || isBusy}
                 onClick={() => next && onChangeStatus(next.id)}
               >
                 Avanzar
@@ -611,6 +821,18 @@ export function RequestDetailPage() {
                 Para avanzar desde “Sin Asignar” debes asignar un usuario.
               </p>
             ) : null}
+          </div>
+
+          <Separator />
+
+          <div className="rounded-xl border p-3">
+            <div className="flex items-start gap-2 text-xs text-muted-foreground">
+              <CalendarDays className="mt-0.5 size-4 text-blue-600" />
+              <div>
+                <div className="font-semibold text-foreground">Creada el</div>
+                <div>{formatDetailDate(request.created_at)}</div>
+              </div>
+            </div>
           </div>
         </Card>
       </div>

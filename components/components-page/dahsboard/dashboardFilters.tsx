@@ -28,7 +28,7 @@ type Props = {
 };
 
 const SELECT_TRIGGER_CLASS =
-  "w-[220px] justify-between";
+  "w-[200px] justify-between";
 const SELECT_VALUE_CLASS = "truncate";
 
 export function DashboardFilters({
