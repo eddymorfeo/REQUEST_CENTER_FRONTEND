@@ -9,6 +9,7 @@ export type AuthUser = {
   fullName: string;
   email: string;
   roleCode: string;
+  profilePhotoUrl?: string | null;
 };
 
 export type LoginResponse = {

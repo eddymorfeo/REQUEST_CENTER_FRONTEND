@@ -1,4 +1,7 @@
 import { http } from "@/api/http/http.client";
+import { tokenStorage } from "@/utils/storage/token.storage";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export type UserItem = {
   id: string;
@@ -6,6 +9,10 @@ export type UserItem = {
   full_name: string;
   email: string;
   role_id: string;
+  phone?: string | null;
+  position?: string | null;
+  department?: string | null;
+  profile_photo_url?: string | null;
   is_active: boolean;
   created_at?: string;
   updated_at?: string;
@@ -34,6 +41,9 @@ export type CreateUserPayload = {
   fullName: string;
   email: string;
   roleId?: string;
+  phone?: string | null;
+  position?: string | null;
+  department?: string | null;
   password: string;
   isActive?: boolean;
 };
@@ -44,8 +54,16 @@ export type UpdateUserPayload = {
   email?: string;
   roleId?: string;
   password?: string;
+  phone?: string | null;
+  position?: string | null;
+  department?: string | null;
   isActive: boolean;
 };
+
+function requireApiUrl(): string {
+  if (!API_URL) throw new Error("NEXT_PUBLIC_API_URL no está definido.");
+  return API_URL;
+}
 
 export const usersApi = {
   listUsers() {
@@ -93,6 +111,58 @@ export const usersApi = {
       body: payload,
       auth: true,
     });
+  },
+
+  async uploadAvatar(id: string, file: File) {
+    const base = requireApiUrl();
+    const token = tokenStorage.getToken();
+    const form = new FormData();
+    form.append("file", file);
+
+    const res = await fetch(`${base}/users/${encodeURIComponent(id)}/avatar`, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      body: form,
+    });
+
+    const isJson = res.headers.get("content-type")?.includes("application/json");
+    const data = isJson ? await res.json() : null;
+
+    if (!res.ok) {
+      throw new Error(data?.message || `Error HTTP ${res.status} al subir foto`);
+    }
+
+    return data as { success: boolean; data: UserItem };
+  },
+
+  deleteAvatar(id: string) {
+    return http<{ success: boolean; data: UserItem }>({
+      method: "DELETE",
+      path: `/users/${encodeURIComponent(id)}/avatar`,
+      auth: true,
+    });
+  },
+
+  async downloadAvatar(id: string): Promise<Blob> {
+    const base = requireApiUrl();
+    const token = tokenStorage.getToken();
+
+    const res = await fetch(`${base}/users/${encodeURIComponent(id)}/avatar`, {
+      method: "GET",
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+
+    if (!res.ok) {
+      let message = `Error HTTP ${res.status} al cargar foto`;
+      try {
+        const isJson = res.headers.get("content-type")?.includes("application/json");
+        const data = isJson ? await res.json() : null;
+        message = data?.message || message;
+      } catch {}
+      throw new Error(message);
+    }
+
+    return res.blob();
   },
 
   deleteUser(id: string) {

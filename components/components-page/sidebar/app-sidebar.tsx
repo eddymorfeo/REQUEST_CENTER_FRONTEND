@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { usersApi } from "@/api/users/users.api";
 import { useAuth } from "@/hooks/auth/useAuth";
 import { NavMain } from "@/components/components-page/sidebar/nav-main";
 import { NavUser } from "@/components/components-page/sidebar/nav-user";
@@ -15,14 +16,43 @@ import { isAdmin } from "@/utils/guards/role.guard";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user } = useAuth();
+  const [avatarSrc, setAvatarSrc] = React.useState("");
+
+  React.useEffect(() => {
+    let currentUrl: string | null = null;
+    let cancelled = false;
+
+    async function loadAvatar() {
+      if (!user?.id || !user.profilePhotoUrl) {
+        setAvatarSrc("");
+        return;
+      }
+
+      try {
+        const blob = await usersApi.downloadAvatar(user.id);
+        if (cancelled) return;
+        currentUrl = URL.createObjectURL(blob);
+        setAvatarSrc(currentUrl);
+      } catch {
+        if (!cancelled) setAvatarSrc("");
+      }
+    }
+
+    void loadAvatar();
+
+    return () => {
+      cancelled = true;
+      if (currentUrl) URL.revokeObjectURL(currentUrl);
+    };
+  }, [user?.id, user?.profilePhotoUrl]);
 
   const sidebarUser = React.useMemo(
     () => ({
       name: user?.fullName ?? "Usuario",
       email: user?.email ?? "",
-      avatar: "",
+      avatar: avatarSrc,
     }),
-    [user?.fullName, user?.email]
+    [avatarSrc, user?.fullName, user?.email]
   );
 
   const config = React.useMemo(() => buildSidebarConfigForUser(user), [user]);
