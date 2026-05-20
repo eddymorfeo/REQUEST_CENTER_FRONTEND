@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { authApi } from "@/api/auth/auth.api";
 import { tokenStorage } from "@/utils/storage/token.storage";
 import { alerts } from "@/utils/alerts/alerts";
@@ -16,6 +16,7 @@ type AuthState = {
 type AuthContextValue = AuthState & {
   login: (payload: LoginRequest, nextUrl?: string | null) => Promise<void>;
   logout: () => void;
+  updateUser: (patch: Partial<AuthUser>) => void;
 };
 
 const AuthContext = React.createContext<AuthContextValue | null>(null);
@@ -79,10 +80,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.push("/auth/login");
   }, [router]);
 
+  const updateUser = React.useCallback((patch: Partial<AuthUser>) => {
+    setState((current) => {
+      if (!current.user) return current;
+
+      const nextUser = { ...current.user, ...patch };
+      tokenStorage.setUser(nextUser);
+
+      return {
+        ...current,
+        user: nextUser,
+      };
+    });
+  }, []);
+
   const value: AuthContextValue = {
     ...state,
     login,
     logout,
+    updateUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

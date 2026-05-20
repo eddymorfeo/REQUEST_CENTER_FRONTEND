@@ -2,39 +2,127 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/hooks/auth/useAuth";
-import { alerts } from "@/utils/alerts/alerts";
-
-import { requestsApi } from "@/api/requests/requests.api";
-import { requestTypesApi, type RequestTypeItem } from "@/api/requests/request-types.api";
-import { requestPrioritiesApi, type RequestPriorityItem } from "@/api/requests/request-priorities.api";
-import { requestStatusApi } from "@/api/requests/request-status.api";
-import type { RequestStatus } from "@/types/requests/request-status.types";
+import {
+  CircleCheck,
+  File,
+  FileArchive,
+  FileImage,
+  FileSpreadsheet,
+  FileText,
+  Flag,
+  LoaderCircle,
+  Paperclip,
+  UploadCloud,
+  UsersRound,
+  X,
+} from "lucide-react";
 
 import { requestAttachmentsApi } from "@/api/requests/request-attachments.api";
-
-import { Card } from "@/components/ui/card";
+import { requestPrioritiesApi, type RequestPriorityItem } from "@/api/requests/request-priorities.api";
+import { requestStatusApi } from "@/api/requests/request-status.api";
+import { requestTypesApi, type RequestTypeItem } from "@/api/requests/request-types.api";
+import { requestsApi } from "@/api/requests/requests.api";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Separator } from "@/components/ui/separator";
 import {
   Select,
-  SelectTrigger,
   SelectContent,
   SelectItem,
+  SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/hooks/auth/useAuth";
+import { getErrorMessage } from "@/lib/errors/get-error-message";
+import { alerts } from "@/utils/alerts/alerts";
 
 function normalizeFiles(files: FileList | null): File[] {
   if (!files) return [];
   return Array.from(files);
 }
 
+function removeSelectedFile(files: File[], fileToRemove: File) {
+  return files.filter(
+    (file) =>
+      !(
+        file.name === fileToRemove.name &&
+        file.size === fileToRemove.size &&
+        file.lastModified === fileToRemove.lastModified
+      )
+  );
+}
+
+const SELECT_PLACEHOLDER = "__select__";
+
+type AttachmentVisualInput = {
+  file_name: string;
+  mime_type?: string | null;
+};
+
+function hasSelectedValue(value: string) {
+  return value.trim() !== "" && value !== SELECT_PLACEHOLDER;
+}
+
+function formatBytes(bytes: number) {
+  if (!bytes) return "-";
+
+  const units = ["B", "KB", "MB", "GB"];
+  let size = bytes;
+  let idx = 0;
+
+  while (size >= 1024 && idx < units.length - 1) {
+    size /= 1024;
+    idx++;
+  }
+
+  return `${size.toFixed(idx === 0 ? 0 : 1)} ${units[idx]}`;
+}
+
+function getAttachmentVisual(file: AttachmentVisualInput) {
+  const mimeType = (file.mime_type ?? "").toLowerCase();
+  const fileName = file.file_name.toLowerCase();
+
+  if (mimeType.startsWith("image/")) {
+    return { icon: FileImage, className: "bg-blue-50 text-blue-700" };
+  }
+
+  if (mimeType.includes("pdf") || fileName.endsWith(".pdf")) {
+    return { icon: FileText, className: "bg-red-50 text-red-700" };
+  }
+
+  if (
+    mimeType.includes("spreadsheet") ||
+    mimeType.includes("excel") ||
+    fileName.endsWith(".xls") ||
+    fileName.endsWith(".xlsx") ||
+    fileName.endsWith(".csv")
+  ) {
+    return { icon: FileSpreadsheet, className: "bg-emerald-50 text-emerald-700" };
+  }
+
+  if (
+    mimeType.includes("zip") ||
+    mimeType.includes("compressed") ||
+    fileName.endsWith(".zip") ||
+    fileName.endsWith(".rar") ||
+    fileName.endsWith(".7z")
+  ) {
+    return { icon: FileArchive, className: "bg-amber-50 text-amber-700" };
+  }
+
+  if (mimeType.startsWith("text/") || fileName.endsWith(".doc") || fileName.endsWith(".docx")) {
+    return { icon: FileText, className: "bg-indigo-50 text-indigo-700" };
+  }
+
+  return { icon: File, className: "bg-muted text-muted-foreground" };
+}
+
 export function RequestCreatePage() {
   const router = useRouter();
   const { user } = useAuth();
-  const isAdmin = user?.roleCode === "ADMIN";
+  const isAdmin = user?.roleCode === "ADMIN" || user?.roleCode === "ADMINISTRADOR";
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -42,22 +130,20 @@ export function RequestCreatePage() {
 
   const [types, setTypes] = React.useState<RequestTypeItem[]>([]);
   const [priorities, setPriorities] = React.useState<RequestPriorityItem[]>([]);
-  const [statuses, setStatuses] = React.useState<RequestStatus[]>([]);
-  const [unassignedStatusId, setUnassignedStatusId] = React.useState<string>("");
+  const [unassignedStatusId, setUnassignedStatusId] = React.useState("");
 
   const [title, setTitle] = React.useState("");
   const [description, setDescription] = React.useState("");
   const [requestTypeId, setRequestTypeId] = React.useState("");
   const [priorityId, setPriorityId] = React.useState("");
-
-  // ✅ Adjuntos (1 o varios)
   const [attachments, setAttachments] = React.useState<File[]>([]);
+  const [isDraggingFiles, setIsDraggingFiles] = React.useState(false);
 
   React.useEffect(() => {
     if (!isAdmin) {
       void (async () => {
         await alerts.error("Acceso restringido", "Solo ADMIN puede crear solicitudes.");
-        router.replace("/requests?view=board");
+        router.replace("/requests?view=list");
       })();
       return;
     }
@@ -71,27 +157,23 @@ export function RequestCreatePage() {
           requestStatusApi.getAll(),
         ]);
 
-        const activeTypes = (typesRes.items ?? []).filter((t) => t.is_active);
-        const activePriorities = (prioritiesRes.items ?? []).filter((p) => p.is_active);
-        const activeStatuses = (statusRes.items ?? []).filter((s) => s.is_active);
+        const activeTypes = (typesRes.items ?? []).filter((type) => type.is_active);
+        const activePriorities = (prioritiesRes.items ?? []).filter((priority) => priority.is_active);
+        const activeStatuses = (statusRes.items ?? []).filter((status) => status.is_active);
 
         setTypes(activeTypes);
         setPriorities(activePriorities);
-        setStatuses(activeStatuses);
 
-        const unassigned = activeStatuses.find((s) => s.code === "UNASSIGNED");
+        const unassigned = activeStatuses.find((status) => status.code === "UNASSIGNED");
         if (!unassigned?.id) {
           await alerts.error(
-            "Configuración incompleta",
-            "No existe el estado inicial UNASSIGNED (Sin Asignar)."
+            "Configuracion incompleta",
+            "No existe el estado inicial UNASSIGNED en el sistema."
           );
         }
         setUnassignedStatusId(unassigned?.id ?? "");
-      } catch (e: any) {
-        await alerts.error(
-          "No se pudo cargar el formulario",
-          e?.message ?? "Intenta nuevamente."
-        );
+      } catch (error: unknown) {
+        await alerts.error("No se pudo cargar el formulario", getErrorMessage(error) || "Intenta nuevamente.");
       } finally {
         setIsLoading(false);
       }
@@ -100,14 +182,12 @@ export function RequestCreatePage() {
     void load();
   }, [isAdmin, router]);
 
-  const uploadAllAttachments = async (requestId: string) => {
+  async function uploadAllAttachments(requestId: string) {
     if (attachments.length === 0) return { ok: true, failed: [] as string[] };
 
     setIsUploading(true);
-
     const failed: string[] = [];
 
-    // ✅ Subimos en secuencia para mejor control y mensajes
     for (const file of attachments) {
       try {
         await requestAttachmentsApi.upload({
@@ -115,51 +195,61 @@ export function RequestCreatePage() {
           title: title.trim() || "request",
           file,
         });
-      } catch (e: any) {
+      } catch {
         failed.push(file.name);
       }
     }
 
     setIsUploading(false);
-
     return { ok: failed.length === 0, failed };
-  };
+  }
 
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  function onSelectFiles(files: FileList | null) {
+    setAttachments(normalizeFiles(files));
+  }
+
+  function handleFileDrop(event: React.DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    setIsDraggingFiles(false);
+    if (isBusy) return;
+
+    const files = normalizeFiles(event.dataTransfer.files);
+    if (files.length > 0) {
+      setAttachments(files);
+    }
+  }
+
+  async function onSubmit(event: React.FormEvent) {
+    event.preventDefault();
     if (!isAdmin) return;
 
     if (!title.trim()) {
-      await alerts.error("Falta título", "Debes ingresar un título.");
+      await alerts.error("Falta titulo", "Debes ingresar un titulo.");
       return;
     }
     if (!description.trim()) {
-      await alerts.error("Falta descripción", "Debes ingresar una descripción.");
+      await alerts.error("Falta descripcion", "Debes ingresar una descripcion.");
       return;
     }
-    if (!requestTypeId) {
-      await alerts.error("Falta tipo", "Debes seleccionar un tipo de solicitud.");
+    if (!hasSelectedValue(requestTypeId)) {
+      await alerts.error("Falta grupo", "Debes seleccionar un grupo.");
       return;
     }
-    if (!priorityId) {
+    if (!hasSelectedValue(priorityId)) {
       await alerts.error("Falta prioridad", "Debes seleccionar una prioridad.");
       return;
     }
     if (!unassignedStatusId) {
-      await alerts.error(
-        "No se pudo determinar el estado inicial",
-        "No existe el estado UNASSIGNED en el sistema."
-      );
+      await alerts.error("No se pudo determinar el estado inicial", "No existe el estado UNASSIGNED en el sistema.");
       return;
     }
 
-    const ok = await alerts.confirm("Crear solicitud", "¿Confirmas crear esta solicitud?");
+    const ok = await alerts.confirm("Crear solicitud", "Confirmas crear esta solicitud?");
     if (!ok) return;
 
     try {
       setIsSubmitting(true);
 
-      // ✅ Backend espera camelCase: statusId, requestTypeId, priorityId
       const res = await requestsApi.createRequest({
         title: title.trim(),
         description: description.trim(),
@@ -172,30 +262,26 @@ export function RequestCreatePage() {
         throw new Error("No se pudo crear la solicitud.");
       }
 
-      const createdId: string = res.data.id;
-
-      // ✅ Si hay adjuntos, los subimos inmediatamente
-      const uploadResult = await uploadAllAttachments(createdId);
+      const uploadResult = await uploadAllAttachments(res.data.id);
 
       if (!uploadResult.ok) {
         await alerts.error(
           "Solicitud creada, pero adjuntos incompletos",
-          `Se creó la solicitud, pero falló la subida de: ${uploadResult.failed.join(", ")}`
+          `Se creo la solicitud, pero fallo la subida de: ${uploadResult.failed.join(", ")}`
         );
       } else {
         await alerts.toastSuccess("Solicitud creada");
       }
 
-      // ✅ redirige al tablero
-      router.push("/requests?view=board");
+      router.push("/requests?view=list");
       router.refresh();
-    } catch (e: any) {
-      await alerts.error("No se pudo crear la solicitud", e?.message ?? "Intenta nuevamente.");
+    } catch (error: unknown) {
+      await alerts.error("No se pudo crear la solicitud", getErrorMessage(error) || "Intenta nuevamente.");
     } finally {
       setIsSubmitting(false);
       setIsUploading(false);
     }
-  };
+  }
 
   if (!isAdmin) return null;
 
@@ -206,125 +292,224 @@ export function RequestCreatePage() {
   const isBusy = isSubmitting || isUploading;
 
   return (
-    <div className="p-4 space-y-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">Crear Solicitud</h1>
-          <p className="text-sm text-muted-foreground">
-            La solicitud se creará en estado <b>Sin Asignar</b>.
-          </p>
-        </div>
-
-        <Button variant="outline" onClick={() => router.back()} disabled={isBusy}>
-          Volver
-        </Button>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Crear Solicitud</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Completa la informacion para crear una nueva solicitud.
+        </p>
       </div>
 
-      <Card className="p-4 rounded-2xl">
-        <form className="space-y-4" onSubmit={onSubmit}>
-          <div>
-            <label className="text-sm font-medium">Título</label>
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ej: Solicitud A - análisis inicial"
-              disabled={isBusy}
-            />
-          </div>
-
-          <div>
-            <label className="text-sm font-medium">Descripción</label>
-            <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe la solicitud..."
-              className="min-h-[120px]"
-              disabled={isBusy}
-            />
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
+      <form className="space-y-5" onSubmit={onSubmit}>
+        <Card className="rounded-xl p-5">
+          <div className="flex items-start gap-3">
+            <FileText className="mt-0.5 size-5 text-blue-600" />
             <div>
-              <label className="text-sm font-medium">Grupo</label>
-              <Select
-                value={requestTypeId}
-                onValueChange={setRequestTypeId}
+              <h2 className="text-base font-semibold">Informacion de la solicitud</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Ingresa los detalles generales de la solicitud.</p>
+            </div>
+          </div>
+
+          <div className="space-y-5">
+            <div className="space-y-2">
+              <label className="text-sm font-semibold">
+                Titulo de la solicitud <span className="text-destructive">*</span>
+              </label>
+              <Input
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                placeholder="Ej: RUC XXXXXXXXXX-X investigar banda XXXXX"
                 disabled={isBusy}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {types.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                className="h-10 rounded-lg"
+              />
             </div>
 
-            <div>
-              <label className="text-sm font-medium">Prioridad</label>
-              <Select value={priorityId} onValueChange={setPriorityId} disabled={isBusy}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar prioridad" />
-                </SelectTrigger>
-                <SelectContent>
-                  {priorities
-                    .slice()
-                    .sort((a, b) => a.sort_order - b.sort_order)
-                    .map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.name}
+            <div className="space-y-2">
+              <label className="text-sm font-semibold">
+                Descripcion <span className="text-destructive">*</span>
+              </label>
+              <Textarea
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                placeholder="Descripción de la solicitud..."
+                className="min-h-28 rounded-lg"
+                disabled={isBusy}
+              />
+            </div>
+
+            <div className="grid gap-5 md:grid-cols-[280px_280px]">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold">
+                  Grupo <span className="text-destructive">*</span>
+                </label>
+                <Select value={requestTypeId || SELECT_PLACEHOLDER} onValueChange={setRequestTypeId} disabled={isBusy}>
+                  <SelectTrigger className="h-10 w-full rounded-lg">
+                    <span className="flex min-w-0 items-center gap-2 text-left">
+                      <UsersRound className="size-4 shrink-0 text-muted-foreground" />
+                      <SelectValue />
+                    </span>
+                  </SelectTrigger>
+                  <SelectContent position="popper" align="start" className="w-[var(--radix-select-trigger-width)]">
+                    <SelectItem value={SELECT_PLACEHOLDER}>
+                      Seleccionar
+                    </SelectItem>
+                    {types.map((type) => (
+                      <SelectItem key={type.id} value={type.id}>
+                        {type.name}
                       </SelectItem>
                     ))}
-                </SelectContent>
-              </Select>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold">
+                  Prioridad <span className="text-destructive">*</span>
+                </label>
+                <Select value={priorityId || SELECT_PLACEHOLDER} onValueChange={setPriorityId} disabled={isBusy}>
+                  <SelectTrigger className="h-10 w-full rounded-lg">
+                    <span className="flex min-w-0 items-center gap-2 text-left">
+                      <Flag className="size-4 shrink-0 text-muted-foreground" />
+                      <SelectValue />
+                    </span>
+                  </SelectTrigger>
+                  <SelectContent position="popper" align="start" className="w-[var(--radix-select-trigger-width)]">
+                    <SelectItem value={SELECT_PLACEHOLDER}>
+                      Seleccionar
+                    </SelectItem>
+                    {priorities
+                      .slice()
+                      .sort((a, b) => a.sort_order - b.sort_order)
+                      .map((priority) => (
+                        <SelectItem key={priority.id} value={priority.id}>
+                          {priority.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="rounded-xl p-5">
+          <div className="flex items-start gap-3">
+            <Paperclip className="mt-0.5 size-5 text-blue-600" />
+            <div>
+              <h2 className="text-base font-semibold">Adjuntar archivos (opcional)</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Puedes subir archivos que ayuden a entender la solicitud.</p>
             </div>
           </div>
 
-          {/* ✅ Adjuntos */}
-          <div>
-            <label className="text-sm font-medium">Adjuntar archivos (opcional)</label>
-            <Input
+          <label
+            className={`flex cursor-pointer flex-col gap-3 rounded-xl border border-dashed p-4 transition-colors sm:flex-row sm:items-center sm:justify-between ${
+              isDraggingFiles ? "border-blue-500 bg-blue-50" : "border-border bg-background"
+            }`}
+            onDragEnter={(event) => {
+              event.preventDefault();
+              if (!isBusy) setIsDraggingFiles(true);
+            }}
+            onDragOver={(event) => {
+              event.preventDefault();
+              if (!isBusy) event.dataTransfer.dropEffect = "copy";
+            }}
+            onDragLeave={() => setIsDraggingFiles(false)}
+            onDrop={handleFileDrop}
+          >
+            <input
+              ref={fileInputRef}
               type="file"
               multiple
+              className="sr-only"
               disabled={isBusy}
-              onChange={(e) => setAttachments(normalizeFiles(e.target.files))}
+              onChange={(event) => onSelectFiles(event.target.files)}
             />
-            {attachments.length > 0 ? (
-              <p className="mt-1 text-xs text-muted-foreground">
-                {attachments.length} archivo(s) seleccionado(s):{" "}
-                <span className="font-medium">
-                  {attachments.map((f) => f.name).join(", ")}
-                </span>
-              </p>
-            ) : (
-              <p className="mt-1 text-xs text-muted-foreground">
-                Puedes subir archivos al crear o después en el detalle de la solicitud.
-              </p>
-            )}
-          </div>
 
-          <Separator />
+            <div className="flex items-center gap-3">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-700">
+                <UploadCloud className="size-5" />
+              </div>
+              <div>
+                <div className="text-sm">
+                  Arrastra y suelta archivos aqui o{" "}
+                  <span className="font-medium underline-offset-2 hover:underline">
+                    selecciona
+                  </span>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Se subiran al guardar cambios.
+                </div>
+              </div>
+            </div>
 
-          <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => router.back()}
-              disabled={isBusy}
-            >
-              Cancelar
-            </Button>
+            <span className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border bg-background px-3 text-sm font-medium shadow-xs">
+              <Paperclip className="size-4" />
+              Seleccionar archivos
+            </span>
+          </label>
 
-            <Button type="submit" disabled={isBusy}>
-              {isSubmitting ? "Creando..." : isUploading ? "Subiendo archivos..." : "Crear"}
-            </Button>
-          </div>
-        </form>
-      </Card>
+          {attachments.length > 0 ? (
+            <div className="space-y-2">
+              {attachments.map((file) => {
+                const visual = getAttachmentVisual({
+                  file_name: file.name,
+                  mime_type: file.type,
+                });
+                const AttachmentIcon = visual.icon;
+
+                return (
+                  <div
+                    key={`${file.name}-${file.size}-${file.lastModified}`}
+                    className="flex w-full items-center justify-between gap-3 rounded-lg border p-2 text-left"
+                  >
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span
+                        className={`flex size-7 shrink-0 items-center justify-center rounded-md ${visual.className}`}
+                      >
+                        <AttachmentIcon className="size-4" />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block truncate text-xs font-medium">
+                          {file.name}
+                        </span>
+                        <span className="block truncate text-xs text-muted-foreground">
+                          {file.type || "application/octet-stream"} · {formatBytes(file.size)}
+                        </span>
+                      </span>
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="size-8 shrink-0 text-muted-foreground"
+                      disabled={isBusy}
+                      aria-label={`Quitar ${file.name}`}
+                      onClick={() => {
+                        setAttachments((current) => removeSelectedFile(current, file));
+                        if (fileInputRef.current) fileInputRef.current.value = "";
+                      }}
+                    >
+                      <X className="size-4" />
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
+        </Card>
+
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="outline" className="h-10 gap-2 rounded-lg" onClick={() => router.back()} disabled={isBusy}>
+            <X className="size-4" />
+            Cancelar
+          </Button>
+
+          <Button type="submit" disabled={isBusy} className="h-10 gap-2 rounded-lg bg-foreground px-5 text-background hover:bg-foreground/90">
+            {isBusy ? <LoaderCircle className="size-4 animate-spin" /> : <CircleCheck className="size-4" />}
+            {isSubmitting ? "Creando..." : isUploading ? "Subiendo archivos..." : "Crear solicitud"}
+          </Button>
+        </div>
+      </form>
     </div>
   );
 }

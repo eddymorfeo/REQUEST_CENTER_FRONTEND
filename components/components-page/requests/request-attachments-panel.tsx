@@ -5,6 +5,7 @@ import { Paperclip, Upload, Download, Trash2 } from "lucide-react";
 
 import { alerts } from "@/utils/alerts/alerts";
 import { useAuth } from "@/hooks/auth/useAuth";
+import { getErrorMessage } from "@/lib/errors/get-error-message";
 import {
   requestAttachmentsApi,
   type RequestAttachmentItem,
@@ -63,10 +64,10 @@ export function RequestAttachmentsPanel({
 
       setItems(list);
       onCountChange?.(list.length);
-    } catch (e: any) {
+    } catch (error: unknown) {
       await alerts.error(
         "No se pudieron cargar adjuntos",
-        e?.message ?? "Intenta nuevamente."
+        getErrorMessage(error) || "Intenta nuevamente."
       );
     } finally {
       setIsLoading(false);
@@ -101,8 +102,8 @@ export function RequestAttachmentsPanel({
 
       await alerts.toastSuccess("Archivo subido");
       await load();
-    } catch (e: any) {
-      await alerts.error("No se pudo subir el archivo", e?.message ?? "Intenta nuevamente.");
+    } catch (error: unknown) {
+      await alerts.error("No se pudo subir el archivo", getErrorMessage(error) || "Intenta nuevamente.");
     } finally {
       setIsUploading(false);
     }
@@ -124,8 +125,8 @@ export function RequestAttachmentsPanel({
       window.URL.revokeObjectURL(url);
 
       await alerts.toastSuccess("Descarga iniciada");
-    } catch (e: any) {
-      await alerts.error("No se pudo descargar", e?.message ?? "Intenta nuevamente.");
+    } catch (error: unknown) {
+      await alerts.error("No se pudo descargar", getErrorMessage(error) || "Intenta nuevamente.");
     } finally {
       setIsDownloadingId(null);
     }
@@ -147,10 +148,10 @@ export function RequestAttachmentsPanel({
       await requestAttachmentsApi.delete(attachment.id);
       await alerts.toastSuccess("Adjunto eliminado");
       await load();
-    } catch (e: any) {
+    } catch (error: unknown) {
       // ⚠️ si tu delete es soft y backend responde “error” pero igual desactiva,
       // puedes cambiar a toastSuccess igual. Pero primero ve el mensaje real.
-      await alerts.error("No se pudo eliminar el adjunto", e?.message ?? "Intenta nuevamente.");
+      await alerts.error("No se pudo eliminar el adjunto", getErrorMessage(error) || "Intenta nuevamente.");
       await load();
     }
   };

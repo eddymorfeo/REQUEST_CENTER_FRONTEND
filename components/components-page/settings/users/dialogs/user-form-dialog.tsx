@@ -1,13 +1,25 @@
 "use client";
 
 import * as React from "react";
+import { motion } from "framer-motion";
+import {
+  AtSign,
+  CheckCircle2,
+  Circle,
+  Eye,
+  EyeOff,
+  KeyRound,
+  ShieldCheck,
+  User2,
+} from "lucide-react";
+
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,9 +31,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { getErrorMessage } from "@/lib/errors/get-error-message";
 
-import { motion } from "framer-motion";
-import { AtSign, KeyRound, ShieldCheck, User2 } from "lucide-react";
 import type { UserTableRow } from "../data-table/columns";
 
 type RoleOption = { id: string; name: string };
@@ -62,18 +73,15 @@ function Field({
 }) {
   return (
     <div className="grid gap-2">
-      <Label
-        htmlFor={htmlFor}
-        className="text-xs uppercase tracking-wide text-muted-foreground"
-      >
+      <Label htmlFor={htmlFor} className="text-sm font-semibold">
         {label}
       </Label>
 
       <div className="relative">
-        <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+        <div className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2 text-muted-foreground">
           {icon}
         </div>
-        <div className="pl-9">{children}</div>
+        {children}
       </div>
 
       {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
@@ -97,6 +105,7 @@ export function UserFormDialog({
   const [roleId, setRoleId] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [isActive, setIsActive] = React.useState(true);
+  const [showPassword, setShowPassword] = React.useState(false);
 
   const [isSaving, setIsSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -105,6 +114,7 @@ export function UserFormDialog({
     if (!open) return;
 
     setError(null);
+    setShowPassword(false);
 
     if (isEdit && initial) {
       setUsername(initial.username ?? "");
@@ -112,7 +122,6 @@ export function UserFormDialog({
       setEmail(initial.email ?? "");
       setRoleId(initial.role_id ?? "");
       setPassword("");
-      // ✅ IMPORTANTE: respeta el estado real
       setIsActive(Boolean(initial.is_active));
     } else {
       setUsername("");
@@ -127,11 +136,11 @@ export function UserFormDialog({
   async function handleSave() {
     setError(null);
 
-    if (!username.trim()) return setError("Username es requerido.");
-    if (!fullName.trim()) return setError("Full name es requerido.");
-    if (!email.trim()) return setError("Email es requerido.");
-    if (!roleId) return setError("Role es requerido.");
-    if (!isEdit && !password.trim()) return setError("Password es requerido para crear.");
+    if (!username.trim()) return setError("El nombre de usuario es requerido.");
+    if (!fullName.trim()) return setError("El nombre completo es requerido.");
+    if (!email.trim()) return setError("El email es requerido.");
+    if (!roleId) return setError("El rol es requerido.");
+    if (!isEdit && !password.trim()) return setError("La contrasena es requerida para crear.");
 
     setIsSaving(true);
     try {
@@ -145,8 +154,8 @@ export function UserFormDialog({
       });
 
       onOpenChange(false);
-    } catch (err: any) {
-      setError(err?.message ?? "No se pudo guardar el usuario.");
+    } catch (error: unknown) {
+      setError(getErrorMessage(error) || "No se pudo guardar el usuario.");
     } finally {
       setIsSaving(false);
     }
@@ -154,29 +163,29 @@ export function UserFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[720px] rounded-2xl p-0 overflow-hidden">
-        {/* Header premium */}
-        <div className="p-6 border-b bg-background">
+      <DialogContent className="overflow-hidden rounded-2xl p-0 sm:max-w-[640px]">
+        <div className="px-6 pb-5 pt-6">
           <DialogHeader>
-            <DialogTitle className="text-lg">
-              {isEdit ? "Editar Usuario" : "Crear Usuario"}
+            <DialogTitle className="text-xl">
+              {isEdit ? "Editar usuario" : "Crear usuario"}
             </DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground">
-              Crea o actualiza los datos de los usuarios y guarda los cambios.
+              {isEdit
+                ? "Actualiza los datos del usuario y guarda los cambios."
+                : "Completa los datos del usuario y guarda los cambios."}
             </DialogDescription>
           </DialogHeader>
         </div>
 
-        {/* Body */}
         <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
+          onSubmit={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
           }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") e.preventDefault(); // ✅ evita recargas
+          onKeyDown={(event) => {
+            if (event.key === "Enter") event.preventDefault();
           }}
-          className="p-6 space-y-5"
+          className="space-y-5 px-6 pb-6"
         >
           {error ? (
             <motion.div
@@ -188,16 +197,15 @@ export function UserFormDialog({
             </motion.div>
           ) : null}
 
-          {/* Grid pro */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <Field label="Username" htmlFor="username" icon={<User2 className="size-4" />}>
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+            <Field label="Nombre de usuario" htmlFor="username" icon={<User2 className="size-4" />}>
               <Input
                 id="username"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={(event) => setUsername(event.target.value)}
                 placeholder="jperez"
                 disabled={isSaving}
-                className="rounded-xl"
+                className="h-10 rounded-lg pl-10"
               />
             </Field>
 
@@ -205,42 +213,40 @@ export function UserFormDialog({
               <Input
                 id="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(event) => setEmail(event.target.value)}
                 placeholder="jperez@minpublico.cl"
                 disabled={isSaving}
-                className="rounded-xl"
+                className="h-10 rounded-lg pl-10"
               />
             </Field>
 
-            <Field label="Full name" htmlFor="fullName" icon={<User2 className="size-4" />}>
+            <Field label="Nombre completo" htmlFor="fullName" icon={<User2 className="size-4" />}>
               <Input
                 id="fullName"
                 value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
+                onChange={(event) => setFullName(event.target.value)}
                 placeholder="Juan Perez"
                 disabled={isSaving}
-                className="rounded-xl"
+                className="h-10 rounded-lg pl-10"
               />
             </Field>
 
             <div className="grid gap-2">
-              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                Role
-              </Label>
+              <Label className="text-sm font-semibold">Rol</Label>
 
               <div className="relative">
-                <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                <div className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2 text-muted-foreground">
                   <ShieldCheck className="size-4" />
                 </div>
 
                 <Select value={roleId} onValueChange={setRoleId} disabled={isSaving}>
-                  <SelectTrigger className="w-full rounded-xl pl-9">
+                  <SelectTrigger className="h-10 w-full rounded-lg pl-10">
                     <SelectValue placeholder="Selecciona un rol" />
                   </SelectTrigger>
-                  <SelectContent>
-                    {roles.map((r) => (
-                      <SelectItem key={r.id} value={r.id}>
-                        {r.name}
+                  <SelectContent position="popper" align="start" className="w-[var(--radix-select-trigger-width)]">
+                    {roles.map((role) => (
+                      <SelectItem key={role.id} value={role.id}>
+                        {role.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -248,63 +254,80 @@ export function UserFormDialog({
               </div>
             </div>
 
-            <Field
-              label={isEdit ? "Password (opcional)" : "Password"}
-              htmlFor="password"
-              icon={<KeyRound className="size-4" />}
-              hint={isEdit ? "Deja vacío para no cambiar." : undefined}
-            >
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder={isEdit ? "Deja vacío para no cambiar" : "123456"}
-                disabled={isSaving}
-                className="rounded-xl"
-              />
-            </Field>
-
-            {/* Activo: toggle SI/NO más claro */}
-            <div className="rounded-2xl border bg-muted/20 p-4 flex items-center justify-between">
-              <div>
-                <div className="text-sm font-semibold">Activo</div>
-                <div className="text-xs text-muted-foreground">
-                  Habilita o deshabilita el usuario.
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
+            <div className="md:col-span-2">
+              <Field
+                label={isEdit ? "Contrasena (opcional)" : "Contrasena"}
+                htmlFor="password"
+                icon={<KeyRound className="size-4" />}
+                hint={isEdit ? "Dejar vacio para mantener la contrasena actual." : undefined}
+              >
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder={isEdit ? "Dejar vacio para no cambiar" : "Ingresa una contrasena"}
+                  disabled={isSaving}
+                  className="h-10 rounded-lg pl-10 pr-10"
+                />
                 <Button
                   type="button"
-                  variant={isActive ? "default" : "outline"}
-                  className="rounded-xl"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  onClick={() => setShowPassword((current) => !current)}
+                  disabled={isSaving}
+                  aria-label={showPassword ? "Ocultar contrasena" : "Mostrar contrasena"}
+                >
+                  {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </Button>
+              </Field>
+            </div>
+
+            <div className="grid gap-3 md:col-span-2">
+              <div>
+                <div className="text-sm font-semibold">Estado</div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Define si el usuario puede acceder al sistema.
+                </p>
+              </div>
+
+              <div className="inline-flex w-fit rounded-lg border bg-background p-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className={`h-10 min-w-28 gap-2 rounded-md ${
+                    isActive ? "bg-foreground text-background hover:bg-foreground/90 hover:text-background" : ""
+                  }`}
                   onClick={() => setIsActive(true)}
                   disabled={isSaving}
                 >
-                  Sí
+                  <CheckCircle2 className={`size-4 ${isActive ? "text-emerald-400" : "text-muted-foreground"}`} />
+                  Activo
                 </Button>
                 <Button
                   type="button"
-                  variant={!isActive ? "default" : "outline"}
-                  className="rounded-xl"
+                  variant="ghost"
+                  className={`h-10 min-w-28 gap-2 rounded-md ${
+                    !isActive ? "bg-foreground text-background hover:bg-foreground/90 hover:text-background" : ""
+                  }`}
                   onClick={() => setIsActive(false)}
                   disabled={isSaving}
                 >
-                  No
+                  <Circle className="size-4" />
+                  Inactivo
                 </Button>
               </div>
             </div>
           </div>
         </form>
 
-        {/* Footer premium */}
-        <div className="p-6 border-t bg-background">
+        <div className="border-t bg-background px-6 py-5">
           <DialogFooter className="gap-2">
             <Button
               type="button"
               variant="outline"
-              className="rounded-xl border-muted-foreground/20 bg-gray-100 text-foreground hover:bg-gray-200 hover:border-muted-foreground/30 transition"
+              className="h-10 rounded-lg px-5"
               onClick={() => onOpenChange(false)}
               disabled={isSaving}
             >
@@ -314,7 +337,7 @@ export function UserFormDialog({
             <motion.div whileHover={{ y: -1 }} whileTap={{ scale: 0.98 }}>
               <Button
                 type="button"
-                className="rounded-xl shadow-sm bg-blue-500 text-background hover:bg-blue-600 active:scale-[0.99] transition"
+                className="h-10 rounded-lg bg-blue-600 px-5 text-white shadow-sm hover:bg-blue-700"
                 onClick={handleSave}
                 disabled={isSaving}
               >

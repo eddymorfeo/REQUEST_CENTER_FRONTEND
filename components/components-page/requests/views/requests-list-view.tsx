@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/auth/useAuth";
 import {
   Calendar,
   ChevronLeft,
@@ -195,6 +196,8 @@ function FilterSelect({
 
 export function RequestsListView({ statuses, types, priorities, requests, onRequestDeleted }: Props) {
   const router = useRouter();
+  const { user } = useAuth();
+  const canDeleteRequests = user?.roleCode === "ADMIN" || user?.roleCode === "ADMINISTRADOR";
   const [assigneeMap, setAssigneeMap] = React.useState<Record<string, AssigneeInfo>>({});
   const [users, setUsers] = React.useState<UserItem[]>([]);
   const [filters, setFilters] = React.useState<FiltersState>(initialFilters);
@@ -486,13 +489,15 @@ export function RequestsListView({ statuses, types, priorities, requests, onRequ
                               <Eye className="mr-2 size-4" />
                               Ver
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-destructive focus:text-destructive"
-                              onClick={() => void handleDelete(request)}
-                            >
-                              <Trash2 className="mr-2 size-4" />
-                              Eliminar
-                            </DropdownMenuItem>
+                            {canDeleteRequests ? (
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onClick={() => void handleDelete(request)}
+                              >
+                                <Trash2 className="mr-2 size-4" />
+                                Eliminar
+                              </DropdownMenuItem>
+                            ) : null}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>

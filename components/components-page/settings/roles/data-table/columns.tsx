@@ -1,14 +1,18 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
-import { ArrowUpDown, Pencil, Trash2 } from "lucide-react";
+import type { Column } from "@tanstack/react-table";
+import { ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AdminRowActions } from "../../admin-row-actions";
 
 export type RoleTableRow = {
   id: string;
   code: string;
   name: string;
   is_active: boolean;
+  created_at?: string | null;
+  updated_at?: string | null;
 };
 
 export type ColumnActions = {
@@ -16,7 +20,7 @@ export type ColumnActions = {
   onDelete: (row: RoleTableRow) => void;
 };
 
-function headerSortable(label: string, column: any) {
+function headerSortable(label: string, column: Column<RoleTableRow, unknown>) {
   return (
     <Button
       type="button"
@@ -58,37 +62,9 @@ export function buildRoleColumns(actions: ColumnActions): ColumnDef<RoleTableRow
     },    
     {
       id: "actions",
-      header: () => <div className="text-right pr-2">Acciones</div>,
+      header: () => <div className="text-center">Acciones</div>,
       cell: ({ row }) => (
-        <div className="flex items-center justify-end gap-1 pr-2">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            title="Editar"
-            onClick={(e) => {
-              e.stopPropagation();
-              actions.onEdit(row.original);
-            }}
-          >
-            <Pencil className="size-4" />
-          </Button>
-
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-destructive hover:text-destructive"
-            title="Eliminar"
-            onClick={(e) => {
-              e.stopPropagation();
-              actions.onDelete(row.original);
-            }}
-          >
-            <Trash2 className="size-4" />
-          </Button>
-        </div>
+        <AdminRowActions row={row.original} onEdit={actions.onEdit} onDelete={actions.onDelete} />
       ),
       enableSorting: false,
     },

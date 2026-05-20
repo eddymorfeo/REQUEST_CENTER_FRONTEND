@@ -9,6 +9,7 @@ import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
+  SidebarHeader,
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { buildSidebarConfigForUser } from "./config/sidebar.mapper";
@@ -50,9 +51,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     () => ({
       name: user?.fullName ?? "Usuario",
       email: user?.email ?? "",
+      role: user?.roleCode ?? "",
       avatar: avatarSrc,
     }),
-    [avatarSrc, user?.fullName, user?.email]
+    [avatarSrc, user?.fullName, user?.email, user?.roleCode]
   );
 
   const config = React.useMemo(() => buildSidebarConfigForUser(user), [user]);
@@ -66,12 +68,23 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   }, [config.navMain]);
 
   return (
-    <Sidebar collapsible="icon" {...props}>
-      <SidebarContent>
+    <Sidebar collapsible="icon" className="border-r border-slate-200 bg-white" {...props}>
+      <SidebarHeader className="px-4 pb-6 pt-5">
+        <div className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-sm font-bold text-white shadow-sm">
+            R
+          </div>
+          <div className="min-w-0 group-data-[collapsible=icon]:hidden">
+            <div className="truncate text-base font-semibold text-slate-950">Request Center</div>
+          </div>
+        </div>
+      </SidebarHeader>
+
+      <SidebarContent className="px-2">
         <NavMain items={navMain} />
       </SidebarContent>
 
-      <SidebarFooter>
+      <SidebarFooter className="border-t border-slate-100 p-3">
         <NavUser user={sidebarUser} />
       </SidebarFooter>
 

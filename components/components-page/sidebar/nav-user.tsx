@@ -1,10 +1,7 @@
 "use client";
 
 import * as React from "react";
-import {
-  ChevronsUpDown,
-  LogOut,
-} from "lucide-react";
+import { ChevronDown, LogOut } from "lucide-react";
 
 import { useAuth } from "@/hooks/auth/useAuth";
 
@@ -29,7 +26,15 @@ function getInitials(fullName: string) {
   if (parts.length === 0) return "U";
   const first = parts[0]?.[0] ?? "";
   const last = parts.length > 1 ? parts[parts.length - 1]?.[0] ?? "" : "";
-  return (first + last).toUpperCase(); // Edward Tejeda => ET
+  return (first + last).toUpperCase();
+}
+
+function getRoleLabel(role?: string) {
+  const normalized = role?.toUpperCase();
+  if (normalized === "ADMIN" || normalized === "ADMINISTRADOR") return "Administrador";
+  if (normalized === "ANALYST" || normalized === "ANALISTA") return "Analista";
+  if (normalized === "FISCAL") return "Fiscal";
+  return role || "Usuario";
 }
 
 export function NavUser({
@@ -38,6 +43,7 @@ export function NavUser({
   user: {
     name: string;
     email: string;
+    role?: string;
     avatar?: string;
   };
 }) {
@@ -45,6 +51,7 @@ export function NavUser({
   const { logout } = useAuth();
 
   const initials = React.useMemo(() => getInitials(user.name), [user.name]);
+  const roleLabel = React.useMemo(() => getRoleLabel(user.role), [user.role]);
   const avatarSrc = user.avatar?.trim() ? user.avatar : undefined;
 
   return (
@@ -54,52 +61,52 @@ export function NavUser({
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              className="h-14 rounded-xl px-2 text-slate-800 hover:bg-blue-50 hover:text-blue-700 data-[state=open]:bg-blue-50 data-[state=open]:text-blue-700 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
             >
-              <Avatar className="h-8 w-8 rounded-lg">
+              <Avatar className="size-9 rounded-full">
                 {avatarSrc ? <AvatarImage src={avatarSrc} alt={user.name} className="object-cover" /> : null}
-                <AvatarFallback className="rounded-lg">{initials}</AvatarFallback>
+                <AvatarFallback className="rounded-full bg-blue-100 text-xs font-semibold text-blue-700">
+                  {initials}
+                </AvatarFallback>
               </Avatar>
 
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{user.name}</span>
-                <span className="truncate text-xs">{user.email}</span>
+              <div className="grid min-w-0 flex-1 text-left leading-tight group-data-[collapsible=icon]:hidden">
+                <span className="truncate text-sm font-semibold">{user.name}</span>
+                <span className="truncate text-xs text-slate-500">{roleLabel}</span>
               </div>
 
-              <ChevronsUpDown className="ml-auto size-4" />
+              <ChevronDown className="ml-auto size-4 text-slate-500 group-data-[collapsible=icon]:hidden" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
 
           <DropdownMenuContent
-            className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+            className="w-(--radix-dropdown-menu-trigger-width) min-w-60 rounded-xl p-2"
             side={isMobile ? "bottom" : "right"}
             align="end"
-            sideOffset={4}
+            sideOffset={6}
           >
             <DropdownMenuLabel className="p-0 font-normal">
-              <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                <Avatar className="h-8 w-8 rounded-lg">
+              <div className="flex items-center gap-3 px-2 py-2 text-left text-sm">
+                <Avatar className="size-10 rounded-full">
                   {avatarSrc ? <AvatarImage src={avatarSrc} alt={user.name} className="object-cover" /> : null}
-                  <AvatarFallback className="rounded-lg">{initials}</AvatarFallback>
+                  <AvatarFallback className="rounded-full bg-blue-100 text-xs font-semibold text-blue-700">
+                    {initials}
+                  </AvatarFallback>
                 </Avatar>
 
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">{user.name}</span>
-                  <span className="truncate text-xs">{user.email}</span>
+                <div className="grid min-w-0 flex-1 text-left leading-tight">
+                  <span className="truncate font-semibold">{user.name}</span>
+                  <span className="truncate text-xs text-muted-foreground">{user.email}</span>
+                  {/* <span className="truncate text-xs text-muted-foreground">{roleLabel}</span> */}
                 </div>
               </div>
             </DropdownMenuLabel>
 
-              {/* <DropdownMenuItem>
-                <BadgeCheck className="mr-2 size-4" />
-                Account
-              </DropdownMenuItem> */}
-
             <DropdownMenuSeparator />
 
-            <DropdownMenuItem onClick={logout}>
-              <LogOut className="mr-2 size-4" />
-              Log out
+            <DropdownMenuItem className="gap-2 rounded-lg" onClick={logout}>
+              <LogOut className="size-4" />
+              Cerrar sesion
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

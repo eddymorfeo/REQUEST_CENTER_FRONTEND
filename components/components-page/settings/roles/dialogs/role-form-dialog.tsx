@@ -1,20 +1,22 @@
 "use client";
 
 import * as React from "react";
+import { motion } from "framer-motion";
+import { CheckCircle2, Circle, Hash, ShieldCheck } from "lucide-react";
+
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getErrorMessage } from "@/lib/errors/get-error-message";
 
-import { motion } from "framer-motion";
-import { Hash, ShieldCheck } from "lucide-react";
 import type { RoleTableRow } from "../data-table/columns";
 
 type Mode = "create" | "edit";
@@ -40,16 +42,42 @@ function Field({
 }) {
   return (
     <div className="grid gap-2">
-      <Label htmlFor={htmlFor} className="text-xs uppercase tracking-wide text-muted-foreground">
+      <Label htmlFor={htmlFor} className="text-sm font-semibold">
         {label}
       </Label>
       <div className="relative">
-        <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+        <div className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2 text-muted-foreground">
           {icon}
         </div>
-        <div className="pl-9">{children}</div>
+        {children}
       </div>
     </div>
+  );
+}
+
+function SegmentButton({
+  active,
+  children,
+  onClick,
+  disabled,
+}: {
+  active: boolean;
+  children: React.ReactNode;
+  onClick: () => void;
+  disabled: boolean;
+}) {
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      className={`h-10 flex-1 gap-2 rounded-md ${
+        active ? "bg-foreground text-background hover:bg-foreground/90 hover:text-background" : ""
+      }`}
+      onClick={onClick}
+      disabled={disabled}
+    >
+      {children}
+    </Button>
   );
 }
 
@@ -68,9 +96,9 @@ export function RoleFormDialog({ open, mode, initial, onOpenChange, onSubmit }: 
     setError(null);
 
     if (isEdit && initial) {
-      setCode((initial as any).code ?? "");
-      setName((initial as any).name ?? "");
-      setIsActive(Boolean((initial as any).is_active ?? true));
+      setCode(initial.code ?? "");
+      setName(initial.name ?? "");
+      setIsActive(Boolean(initial.is_active));
     } else {
       setCode("");
       setName("");
@@ -81,15 +109,15 @@ export function RoleFormDialog({ open, mode, initial, onOpenChange, onSubmit }: 
   async function handleSave() {
     setError(null);
 
-    if (!code.trim()) return setError("Código es requerido.");
-    if (!name.trim()) return setError("Nombre es requerido.");
+    if (!code.trim()) return setError("El codigo es requerido.");
+    if (!name.trim()) return setError("El nombre es requerido.");
 
     setIsSaving(true);
     try {
       await onSubmit({ code: code.trim(), name: name.trim(), isActive });
       onOpenChange(false);
-    } catch (e: any) {
-      setError(e?.message ?? "No se pudo guardar el rol.");
+    } catch (error: unknown) {
+      setError(getErrorMessage(error) || "No se pudo guardar el rol.");
     } finally {
       setIsSaving(false);
     }
@@ -97,25 +125,29 @@ export function RoleFormDialog({ open, mode, initial, onOpenChange, onSubmit }: 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[720px] rounded-2xl p-0 overflow-hidden">
-        <div className="p-6 border-b bg-background">
+      <DialogContent className="overflow-hidden rounded-2xl p-0 sm:max-w-[620px]">
+        <div className="px-6 pb-5 pt-6">
           <DialogHeader>
-            <DialogTitle className="text-lg">{isEdit ? "Editar Rol" : "Crear Rol"}</DialogTitle>
+            <DialogTitle className="text-xl">
+              {isEdit ? "Editar rol" : "Crear rol"}
+            </DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground">
-              Crea o actualiza roles del sistema y guarda los cambios.
+              {isEdit
+                ? "Actualiza los datos del rol y guarda los cambios."
+                : "Completa los datos del rol y guarda los cambios."}
             </DialogDescription>
           </DialogHeader>
         </div>
 
         <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
+          onSubmit={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
           }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") e.preventDefault();
+          onKeyDown={(event) => {
+            if (event.key === "Enter") event.preventDefault();
           }}
-          className="p-6 space-y-5"
+          className="space-y-5 px-6 pb-6"
         >
           {error ? (
             <motion.div
@@ -127,15 +159,15 @@ export function RoleFormDialog({ open, mode, initial, onOpenChange, onSubmit }: 
             </motion.div>
           ) : null}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <Field label="Código" htmlFor="code" icon={<Hash className="size-4" />}>
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+            <Field label="Codigo" htmlFor="code" icon={<Hash className="size-4" />}>
               <Input
                 id="code"
                 value={code}
-                onChange={(e) => setCode(e.target.value)}
+                onChange={(event) => setCode(event.target.value)}
                 placeholder="ADMIN"
                 disabled={isSaving}
-                className="rounded-xl"
+                className="h-10 rounded-lg pl-10"
               />
             </Field>
 
@@ -143,49 +175,49 @@ export function RoleFormDialog({ open, mode, initial, onOpenChange, onSubmit }: 
               <Input
                 id="name"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(event) => setName(event.target.value)}
                 placeholder="Administrador"
                 disabled={isSaving}
-                className="rounded-xl"
+                className="h-10 rounded-lg pl-10"
               />
             </Field>
 
-            <div className="rounded-2xl border bg-muted/20 p-4 flex items-center justify-between md:col-span-2">
+            <div className="rounded-xl border p-5 md:col-span-2">
               <div>
-                <div className="text-sm font-semibold">Activo</div>
-                <div className="text-xs text-muted-foreground">Habilita o deshabilita el rol.</div>
+                <div className="text-sm font-semibold">Estado</div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Define si el rol esta habilitado para el sistema.
+                </p>
               </div>
 
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant={isActive ? "default" : "outline"}
-                  className="rounded-xl"
+              <div className="mt-4 inline-flex w-full max-w-xs rounded-lg border bg-background p-1">
+                <SegmentButton
+                  active={isActive}
                   onClick={() => setIsActive(true)}
                   disabled={isSaving}
                 >
-                  Sí
-                </Button>
-                <Button
-                  type="button"
-                  variant={!isActive ? "default" : "outline"}
-                  className="rounded-xl"
+                  <CheckCircle2 className={`size-4 ${isActive ? "text-emerald-400" : "text-muted-foreground"}`} />
+                  Activo
+                </SegmentButton>
+                <SegmentButton
+                  active={!isActive}
                   onClick={() => setIsActive(false)}
                   disabled={isSaving}
                 >
-                  No
-                </Button>
+                  <Circle className="size-4" />
+                  Inactivo
+                </SegmentButton>
               </div>
             </div>
           </div>
         </form>
 
-        <div className="p-6 border-t bg-background">
+        <div className="border-t bg-background px-6 py-5">
           <DialogFooter className="gap-2">
             <Button
               type="button"
               variant="outline"
-              className="rounded-xl border-muted-foreground/20 bg-gray-100 text-foreground hover:bg-gray-200 hover:border-muted-foreground/30 transition"
+              className="h-10 rounded-lg px-5"
               onClick={() => onOpenChange(false)}
               disabled={isSaving}
             >
@@ -195,7 +227,7 @@ export function RoleFormDialog({ open, mode, initial, onOpenChange, onSubmit }: 
             <motion.div whileHover={{ y: -1 }} whileTap={{ scale: 0.98 }}>
               <Button
                 type="button"
-                className="rounded-xl shadow-sm bg-blue-500 text-background hover:bg-blue-600 active:scale-[0.99] transition"
+                className="h-10 rounded-lg bg-blue-600 px-5 text-white shadow-sm hover:bg-blue-700"
                 onClick={handleSave}
                 disabled={isSaving}
               >

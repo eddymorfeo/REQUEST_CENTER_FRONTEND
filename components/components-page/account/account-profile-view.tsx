@@ -4,10 +4,9 @@ import * as React from "react";
 import { motion } from "framer-motion";
 
 import { usersApi } from "@/api/users/users.api";
+import { useAuth } from "@/hooks/auth/useAuth";
 import { getErrorMessage } from "@/lib/errors/get-error-message";
-import type { AuthUser } from "@/types/auth/auth.types";
 import { alerts } from "@/utils/alerts/alerts";
-import { tokenStorage } from "@/utils/storage/token.storage";
 
 import { getLoggedAuthUser, splitFullName } from "./account.helpers";
 import { AccountHeader } from "./components/account-header";
@@ -27,6 +26,8 @@ const initialDraft: PersonalDraft = {
 };
 
 export default function AccountProfileView() {
+  const { updateUser } = useAuth();
+
   const [activeTab, setActiveTab] = React.useState<AccountTab>("data");
   const [form, setForm] = React.useState<AccountFormState | null>(null);
   const [draft, setDraft] = React.useState<PersonalDraft>(initialDraft);
@@ -159,7 +160,7 @@ export default function AccountProfileView() {
         password: mode === "password" ? newPassword : undefined,
       });
 
-      updateStoredUser(form.id, {
+      updateUser({
         fullName,
         email: form.email.trim().toLowerCase(),
       });
@@ -201,7 +202,7 @@ export default function AccountProfileView() {
       const profilePhotoUrl = updated.profile_photo_url ?? null;
 
       setForm((current) => (current ? { ...current, profilePhotoUrl } : current));
-      updateStoredUser(form.id, { profilePhotoUrl });
+      updateUser({ profilePhotoUrl });
       await refreshAvatarPreview(form.id, profilePhotoUrl);
 
       void alerts.toastSuccess("Foto actualizada");
@@ -225,7 +226,7 @@ export default function AccountProfileView() {
 
       setForm((current) => (current ? { ...current, profilePhotoUrl } : current));
       setAvatarObjectUrl(null);
-      updateStoredUser(form.id, { profilePhotoUrl });
+      updateUser({ profilePhotoUrl });
 
       void alerts.toastSuccess("Foto eliminada");
     } catch (error: unknown) {
@@ -316,10 +317,4 @@ function validateAccountSave({
   if (newPassword.length < 8) return "La contrasena debe tener al menos 8 caracteres.";
   if (newPassword !== confirmPassword) return "Las contrasenas no coinciden.";
   return null;
-}
-
-function updateStoredUser(userId: string, patch: Partial<AuthUser>) {
-  const current = tokenStorage.getUser<AuthUser>();
-  if (current?.id !== userId) return;
-  tokenStorage.setUser({ ...current, ...patch });
 }

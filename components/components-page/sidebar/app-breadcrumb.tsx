@@ -11,6 +11,14 @@ import {
 } from "@/components/ui/breadcrumb";
 
 function humanize(segment: string) {
+  const labels: Record<string, string> = {
+    requests: "Solicitudes",
+    new: "Nueva solicitud",
+    account: "Mi cuenta",
+  };
+
+  if (labels[segment]) return labels[segment];
+
   return segment
     .replace(/-/g, " ")
     .replace(/\b\w/g, (m) => m.toUpperCase());

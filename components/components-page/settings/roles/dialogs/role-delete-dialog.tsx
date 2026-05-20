@@ -1,17 +1,19 @@
 "use client";
 
 import * as React from "react";
+import { motion } from "framer-motion";
+import { Trash2 } from "lucide-react";
+
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { motion } from "framer-motion";
-import { Trash2 } from "lucide-react";
+import { getErrorMessage } from "@/lib/errors/get-error-message";
 
 import type { RoleTableRow } from "../data-table/columns";
 
@@ -35,8 +37,8 @@ export function RoleDeleteDialog({ open, role, onOpenChange, onConfirm }: Props)
     try {
       await onConfirm(role.id);
       onOpenChange(false);
-    } catch (e: any) {
-      setError(e?.message ?? "No se pudo eliminar el rol.");
+    } catch (error: unknown) {
+      setError(getErrorMessage(error) || "No se pudo eliminar el rol.");
     } finally {
       setIsDeleting(false);
     }
@@ -44,17 +46,17 @@ export function RoleDeleteDialog({ open, role, onOpenChange, onConfirm }: Props)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[520px] rounded-2xl p-0 overflow-hidden">
-        <div className="p-6 border-b">
+      <DialogContent className="overflow-hidden rounded-2xl p-0 sm:max-w-[520px]">
+        <div className="border-b p-6">
           <DialogHeader>
-            <DialogTitle className="text-lg">Eliminar Rol</DialogTitle>
+            <DialogTitle className="text-lg">Eliminar rol</DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground">
-              Esta acción no se puede deshacer.
+              Esta accion no se puede deshacer.
             </DialogDescription>
           </DialogHeader>
         </div>
 
-        <div className="p-6 space-y-4">
+        <div className="space-y-4 p-6">
           {error ? (
             <motion.div
               initial={{ opacity: 0, y: 4 }}
@@ -67,21 +69,21 @@ export function RoleDeleteDialog({ open, role, onOpenChange, onConfirm }: Props)
 
           <div className="rounded-2xl border bg-muted/20 p-4">
             <div className="text-sm">
-              ¿Seguro que deseas eliminar el rol{" "}
-              <span className="font-semibold">{(role as any)?.code ?? "—"}</span>?
+              Seguro que deseas eliminar el rol{" "}
+              <span className="font-semibold">{role?.code ?? "-"}</span>?
             </div>
-            <div className="text-xs text-muted-foreground mt-1">
-              Se eliminará el registro y no podrás recuperarlo.
+            <div className="mt-1 text-xs text-muted-foreground">
+              Se eliminara el registro y no podras recuperarlo.
             </div>
           </div>
         </div>
 
-        <div className="p-6 border-t bg-background">
+        <div className="border-t bg-background p-6">
           <DialogFooter className="gap-2">
             <Button
               type="button"
               variant="outline"
-              className="rounded-xl border-muted-foreground/20 bg-gray-100 text-foreground hover:bg-gray-200 hover:border-muted-foreground/30 transition"
+              className="h-10 rounded-lg px-5"
               onClick={() => onOpenChange(false)}
               disabled={isDeleting}
             >
@@ -91,7 +93,7 @@ export function RoleDeleteDialog({ open, role, onOpenChange, onConfirm }: Props)
             <motion.div whileHover={{ y: -1 }} whileTap={{ scale: 0.98 }}>
               <Button
                 type="button"
-                className="rounded-xl gap-2 bg-red-600 text-white hover:bg-red-700 transition"
+                className="h-10 gap-2 rounded-lg bg-red-600 px-5 text-white hover:bg-red-700"
                 onClick={handleDelete}
                 disabled={isDeleting}
               >

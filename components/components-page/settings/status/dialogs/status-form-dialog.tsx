@@ -1,19 +1,22 @@
 "use client";
 
 import * as React from "react";
+import { motion } from "framer-motion";
+import { CheckCircle2, Circle, Hash, ListOrdered, Tag } from "lucide-react";
+
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { motion } from "framer-motion";
-import { Hash, ListOrdered, Flag, ToggleLeft } from "lucide-react";
+import { getErrorMessage } from "@/lib/errors/get-error-message";
+
 import type { StatusTableRow } from "../data-table/columns";
 
 type Mode = "create" | "edit";
@@ -47,17 +50,43 @@ function Field({
 }) {
   return (
     <div className="grid gap-2">
-      <Label htmlFor={htmlFor} className="text-xs uppercase tracking-wide text-muted-foreground">
+      <Label htmlFor={htmlFor} className="text-sm font-semibold">
         {label}
       </Label>
       <div className="relative">
-        <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+        <div className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2 text-muted-foreground">
           {icon}
         </div>
-        <div className="pl-9">{children}</div>
+        {children}
       </div>
       {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
     </div>
+  );
+}
+
+function SegmentButton({
+  active,
+  children,
+  onClick,
+  disabled,
+}: {
+  active: boolean;
+  children: React.ReactNode;
+  onClick: () => void;
+  disabled: boolean;
+}) {
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      className={`h-10 flex-1 gap-2 rounded-md ${
+        active ? "bg-foreground text-background hover:bg-foreground/90 hover:text-background" : ""
+      }`}
+      onClick={onClick}
+      disabled={disabled}
+    >
+      {children}
+    </Button>
   );
 }
 
@@ -95,12 +124,12 @@ export function StatusFormDialog({ open, mode, initial, onOpenChange, onSubmit }
   async function handleSave() {
     setError(null);
 
-    if (!code.trim()) return setError("Código es requerido.");
-    if (!name.trim()) return setError("Nombre es requerido.");
+    if (!code.trim()) return setError("El codigo es requerido.");
+    if (!name.trim()) return setError("El nombre es requerido.");
 
     const parsedSort = sortOrder.trim() === "" ? undefined : Number.parseInt(sortOrder, 10);
     if (parsedSort !== undefined && Number.isNaN(parsedSort)) {
-      return setError("Sort order debe ser un número.");
+      return setError("El orden debe ser un numero.");
     }
 
     setIsSaving(true);
@@ -113,8 +142,8 @@ export function StatusFormDialog({ open, mode, initial, onOpenChange, onSubmit }
         isActive,
       });
       onOpenChange(false);
-    } catch (e: any) {
-      setError(e?.message ?? "No se pudo guardar el estado.");
+    } catch (error: unknown) {
+      setError(getErrorMessage(error) || "No se pudo guardar el estado.");
     } finally {
       setIsSaving(false);
     }
@@ -122,25 +151,29 @@ export function StatusFormDialog({ open, mode, initial, onOpenChange, onSubmit }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[720px] rounded-2xl p-0 overflow-hidden">
-        <div className="p-6 border-b bg-background">
+      <DialogContent className="overflow-hidden rounded-2xl p-0 sm:max-w-[680px]">
+        <div className="px-6 pb-5 pt-6">
           <DialogHeader>
-            <DialogTitle className="text-lg">{isEdit ? "Editar Estado" : "Crear Estado"}</DialogTitle>
+            <DialogTitle className="text-2xl">
+              {isEdit ? "Editar Estado" : "Crear Estado"}
+            </DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground">
-              Crea o actualiza estados del flujo de solicitudes.
+              {isEdit
+                ? "Actualiza los datos del estado y guarda los cambios."
+                : "Completa los datos del estado y guarda los cambios."}
             </DialogDescription>
           </DialogHeader>
         </div>
 
         <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
+          onSubmit={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
           }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") e.preventDefault();
+          onKeyDown={(event) => {
+            if (event.key === "Enter") event.preventDefault();
           }}
-          className="p-6 space-y-5"
+          className="space-y-5 px-6 pb-6"
         >
           {error ? (
             <motion.div
@@ -152,110 +185,105 @@ export function StatusFormDialog({ open, mode, initial, onOpenChange, onSubmit }
             </motion.div>
           ) : null}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <Field label="Código" htmlFor="code" icon={<Hash className="size-4" />}>
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+            <Field label="Codigo" htmlFor="code" icon={<Hash className="size-4" />}>
               <Input
                 id="code"
                 value={code}
-                onChange={(e) => setCode(e.target.value)}
+                onChange={(event) => setCode(event.target.value)}
                 placeholder="IN_PROGRESS"
                 disabled={isSaving}
-                className="rounded-xl"
+                className="h-12 rounded-lg pl-10"
               />
             </Field>
 
-            <Field label="Nombre" htmlFor="name" icon={<ToggleLeft className="size-4" />}>
+            <Field label="Nombre" htmlFor="name" icon={<Tag className="size-4" />}>
               <Input
                 id="name"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(event) => setName(event.target.value)}
                 placeholder="En Proceso"
                 disabled={isSaving}
-                className="rounded-xl"
+                className="h-12 rounded-lg pl-10"
               />
             </Field>
 
             <Field
-              label="Sort Order"
+              label="Orden"
               htmlFor="sortOrder"
               icon={<ListOrdered className="size-4" />}
-              hint="Opcional. Determina el orden de visualización."
+              hint="Determina el orden de visualizacion."
             >
               <Input
                 id="sortOrder"
                 value={sortOrder}
-                onChange={(e) => setSortOrder(e.target.value)}
-                placeholder="20"
+                onChange={(event) => setSortOrder(event.target.value)}
+                placeholder="1"
                 inputMode="numeric"
                 disabled={isSaving}
-                className="rounded-xl"
+                className="h-12 rounded-lg pl-10"
               />
             </Field>
 
-            <div className="rounded-2xl border bg-muted/20 p-4 flex items-center justify-between">
-              <div>
-                <div className="text-sm font-semibold">Terminal</div>
-                <div className="text-xs text-muted-foreground">Indica si es un estado final.</div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant={isTerminal ? "default" : "outline"}
-                  className="rounded-xl"
-                  onClick={() => setIsTerminal(true)}
-                  disabled={isSaving}
-                >
-                  Sí
-                </Button>
-                <Button
-                  type="button"
-                  variant={!isTerminal ? "default" : "outline"}
-                  className="rounded-xl"
-                  onClick={() => setIsTerminal(false)}
-                  disabled={isSaving}
-                >
-                  No
-                </Button>
+            <div className="grid gap-3">
+              <div className="text-sm font-semibold">Terminal</div>
+              <div className="grid grid-cols-[1fr_180px] items-center gap-4">
+                <p className="text-sm text-muted-foreground">Indica si es un estado final.</p>
+                <div className="inline-flex rounded-lg border bg-background p-1">
+                  <SegmentButton
+                    active={isTerminal}
+                    onClick={() => setIsTerminal(true)}
+                    disabled={isSaving}
+                  >
+                    Si
+                  </SegmentButton>
+                  <SegmentButton
+                    active={!isTerminal}
+                    onClick={() => setIsTerminal(false)}
+                    disabled={isSaving}
+                  >
+                    No
+                  </SegmentButton>
+                </div>
               </div>
             </div>
 
-            <div className="rounded-2xl border bg-muted/20 p-4 flex items-center justify-between md:col-span-2">
+            <div className="rounded-xl border p-5 md:col-span-2">
               <div>
-                <div className="text-sm font-semibold">Activo</div>
-                <div className="text-xs text-muted-foreground">Habilita o deshabilita el estado.</div>
+                <div className="text-sm font-semibold">Estado</div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Define si el estado esta habilitado para el sistema.
+                </p>
               </div>
 
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant={isActive ? "default" : "outline"}
-                  className="rounded-xl"
+              <div className="mt-4 inline-flex w-full rounded-lg border bg-background p-1">
+                <SegmentButton
+                  active={isActive}
                   onClick={() => setIsActive(true)}
                   disabled={isSaving}
                 >
-                  Sí
-                </Button>
-                <Button
-                  type="button"
-                  variant={!isActive ? "default" : "outline"}
-                  className="rounded-xl"
+                  <CheckCircle2 className={`size-4 ${isActive ? "text-emerald-400" : "text-muted-foreground"}`} />
+                  Activo
+                </SegmentButton>
+                <SegmentButton
+                  active={!isActive}
                   onClick={() => setIsActive(false)}
                   disabled={isSaving}
                 >
-                  No
-                </Button>
+                  <Circle className="size-4" />
+                  Inactivo
+                </SegmentButton>
               </div>
             </div>
           </div>
         </form>
 
-        <div className="p-6 border-t bg-background">
+        <div className="border-t bg-background px-6 py-5">
           <DialogFooter className="gap-2">
             <Button
               type="button"
               variant="outline"
-              className="rounded-xl border-muted-foreground/20 bg-gray-100 text-foreground hover:bg-gray-200 hover:border-muted-foreground/30 transition"
+              className="h-10 rounded-lg px-5"
               onClick={() => onOpenChange(false)}
               disabled={isSaving}
             >
@@ -265,7 +293,7 @@ export function StatusFormDialog({ open, mode, initial, onOpenChange, onSubmit }
             <motion.div whileHover={{ y: -1 }} whileTap={{ scale: 0.98 }}>
               <Button
                 type="button"
-                className="rounded-xl shadow-sm bg-blue-500 text-background hover:bg-blue-600 active:scale-[0.99] transition"
+                className="h-10 rounded-lg bg-blue-600 px-5 text-white shadow-sm hover:bg-blue-700"
                 onClick={handleSave}
                 disabled={isSaving}
               >
