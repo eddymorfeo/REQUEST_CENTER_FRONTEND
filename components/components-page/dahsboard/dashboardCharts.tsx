@@ -11,6 +11,7 @@ import { clampTopN } from "@/components/components-page/dahsboard/dashboardForma
 import {
   colorByStatusCode,
   colorByPriorityCode,
+  colorByGroupName,
 } from "@/components/components-page/dahsboard/dashboardColors";
 
 import type { OverviewData, DistributionData } from "@/api/metrics/metrics.api";
@@ -83,14 +84,6 @@ function barOptionsY(params?: { showLegend?: boolean; integerTicks?: boolean }):
       },
     },
   };
-}
-
-/** Color estable por label (no depende del orden) */
-function colorFromLabel(label: string) {
-  let hash = 0;
-  for (let i = 0; i < label.length; i++) hash = (hash * 31 + label.charCodeAt(i)) >>> 0;
-  const hue = hash % 360;
-  return `hsl(${hue} 70% 55%)`;
 }
 
 /* -------------------------------- Charts -------------------------------- */
@@ -168,7 +161,7 @@ export function OpenDistributionCharts({ data }: { data: DistributionData | null
 
   const typeLabels = type.map((x) => x.name);
   const typeValues = type.map((x) => x.count);
-  const typeColors = typeLabels.map(colorFromLabel);
+  const typeColors = typeLabels.map((label, index) => colorByGroupName(label, index));
 
   return (
     <div className="grid gap-4 md:grid-cols-8">
@@ -176,7 +169,7 @@ export function OpenDistributionCharts({ data }: { data: DistributionData | null
         <CardHeader>
           <CardTitle className="text-sm">Activas por prioridad</CardTitle>
         </CardHeader>
-        <CardContent className="h-[280px]">
+        <CardContent className="h-70">
           <Doughnut
             data={{
               labels: priLabels,
@@ -195,7 +188,7 @@ export function OpenDistributionCharts({ data }: { data: DistributionData | null
         <CardHeader>
           <CardTitle className="text-sm">Activas por grupo</CardTitle>
         </CardHeader>
-        <CardContent className="h-[280px]">
+        <CardContent className="h-70">
           <Doughnut
             data={{
               labels: typeLabels,
