@@ -28,12 +28,18 @@ function formatHistoryDate(value?: string) {
   }).format(date);
 }
 
-function getActorName(item: RequestStatusHistoryItem) {
-  return (
-    item.changed_by_full_name?.trim() ||
-    item.changed_by_username?.trim() ||
-    "Usuario sin nombre"
-  );
+function getActorName(item: RequestStatusHistoryItem, requesterName?: string) {
+  const fullName = item.changed_by_full_name?.trim();
+  const username = item.changed_by_username?.trim();
+  const actorIdentity = ((username || "") + " " + (fullName || "")).toLowerCase();
+  const isPublicPortalActor =
+    actorIdentity.includes("public_portal") ||
+    actorIdentity.includes("portal publico") ||
+    actorIdentity.includes("portal p\u00fablico");
+
+  if (isPublicPortalActor && requesterName?.trim()) return requesterName.trim();
+
+  return fullName || username || "Usuario sin nombre";
 }
 
 function getInitials(name: string) {
@@ -70,9 +76,10 @@ function getToStatusLabel(item: RequestStatusHistoryItem) {
 type Props = {
   requestId: string;
   refreshKey?: number;
+  requesterName?: string;
 };
 
-export function RequestStatusHistoryPanel({ requestId, refreshKey = 0 }: Props) {
+export function RequestStatusHistoryPanel({ requestId, refreshKey = 0, requesterName }: Props) {
   const [items, setItems] = React.useState<RequestStatusHistoryItem[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
 
@@ -142,7 +149,7 @@ export function RequestStatusHistoryPanel({ requestId, refreshKey = 0 }: Props) 
 
             <div className="space-y-3">
               {timelineItems.map((item, index) => {
-                const actorName = getActorName(item);
+                const actorName = getActorName(item, requesterName);
                 const fromStatus = getFromStatusLabel(item);
                 const toStatus = getToStatusLabel(item);
 

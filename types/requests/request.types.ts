@@ -15,7 +15,24 @@ export type RequestItem = {
   first_assigned_at: string | null;
   closed_at: string | null;
 
-  // Campos “denormalizados” que ya devuelve tu backend (según tu ejemplo)
+  requester_id?: string | null;
+  prosecutor_office_id?: string | null;
+  tracking_code?: string | null;
+  source?: "INTERNAL" | "PUBLIC_PORTAL" | string | null;
+  public_status?: string | null;
+  submitted_at?: string | null;
+  last_public_activity_at?: string | null;
+
+  requester_first_name?: string | null;
+  requester_last_name?: string | null;
+  requester_email?: string | null;
+  requester_phone?: string | null;
+
+  prosecutor_office_code?: string | null;
+  prosecutor_office_name?: string | null;
+  prosecutor_office_region_code?: string | null;
+  prosecutor_office_region_name?: string | null;
+
   status_code?: string;
   status_name?: string;
   status_sort_order?: number;

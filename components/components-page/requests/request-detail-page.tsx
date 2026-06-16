@@ -506,6 +506,10 @@ export function RequestDetailPage() {
 
   const { current, prev, next } = findPrevNext(statuses, request.status_id);
   const isBusy = isDeleting || isSavingChanges;
+  const requesterFullName = [request.requester_first_name, request.requester_last_name].filter(Boolean).join(" ");
+  const hasRequesterData = Boolean(request.requester_id || requesterFullName || request.requester_email || request.requester_phone);
+  const prosecutorOfficeLabel = request.prosecutor_office_name ?? "No registrada";
+  const regionLabel = request.prosecutor_office_region_name ?? "No registrada";
 
   return (
     <div className="p-4 space-y-4">
@@ -532,8 +536,9 @@ export function RequestDetailPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
-        <Card className="p-4 rounded-2xl space-y-4">
+      <div className="grid items-start gap-4 lg:grid-cols-[1fr_360px]">
+        <div className="space-y-4">
+          <Card className="p-4 rounded-2xl space-y-4">
           <div className="flex items-end justify-between gap-3">
             <div className="min-w-0 w-full space-y-2">
               <label className="text-sm font-medium">Título de la solicitud</label>
@@ -738,7 +743,54 @@ export function RequestDetailPage() {
           </div>
         </Card>
 
+
+          <RequestObservationsPanel requestId={request.id} disabled={isDeleting} />
+          <RequestStatusHistoryPanel
+            requestId={request.id}
+            refreshKey={statusHistoryRefreshKey}
+            requesterName={requesterFullName || undefined}
+          />
+        </div>
         <Card className="p-4 rounded-2xl space-y-4">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <UserRound className="size-4" />
+              Datos del solicitante
+            </div>
+
+            {hasRequesterData ? (
+              <div className="grid gap-3 rounded-xl border bg-muted/20 p-3 text-sm">
+                <div>
+                  <div className="text-xs font-medium text-muted-foreground">Nombre</div>
+                  <div className="font-semibold">{requesterFullName || "No registrado"}</div>
+                </div>
+                <div>
+                  <div className="text-xs font-medium text-muted-foreground">Email</div>
+                  <div className="break-all font-medium">{request.requester_email ?? "No registrado"}</div>
+                </div>
+                <div>
+                  <div className="text-xs font-medium text-muted-foreground">Telefono</div>
+                  <div className="font-medium">{request.requester_phone ?? "No registrado"}</div>
+                </div>
+                <div>
+                  <div className="text-xs font-medium text-muted-foreground">Fiscalia</div>
+                  <div className="font-medium">{prosecutorOfficeLabel}</div>
+                  <div className="text-xs text-muted-foreground">{regionLabel}</div>
+                </div>
+                <div>
+                  <div className="text-xs font-medium text-muted-foreground">Codigo de seguimiento</div>
+                  <div className="font-semibold text-blue-700">{request.tracking_code ?? "No generado"}</div>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed p-3 text-xs text-muted-foreground">
+                Solicitud interna sin solicitante externo asociado.
+              </div>
+            )}
+          </div>
+
+          <Separator />
+
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-sm font-semibold">
               <UserRound className="size-4" />
@@ -793,9 +845,6 @@ export function RequestDetailPage() {
               <Circle className="size-3 fill-amber-400 text-amber-400" />
               {current?.name ?? request.status_name ?? "Sin estado"}
             </div>
-            <div className="text-xs text-muted-foreground">
-              Solo se permite avanzar/retroceder 1 estado.
-            </div>
 
             <div className="flex gap-2">
               <Button
@@ -836,11 +885,6 @@ export function RequestDetailPage() {
           </div>
         </Card>
       </div>
-      <RequestObservationsPanel requestId={request.id} disabled={isDeleting} />
-      <RequestStatusHistoryPanel
-        requestId={request.id}
-        refreshKey={statusHistoryRefreshKey}
-      />
     </div>
   );
 }

@@ -284,6 +284,7 @@ export function RequestsListView({ statuses, types, priorities, requests, onRequ
         !search ||
         request.title.toLowerCase().includes(search) ||
         request.id.toLowerCase().includes(search) ||
+        request.tracking_code?.toLowerCase().includes(search) ||
         request.description?.toLowerCase().includes(search);
 
       const matchesStatus = filters.statusId === ALL_VALUE || request.status_id === filters.statusId;
@@ -424,6 +425,7 @@ export function RequestsListView({ statuses, types, priorities, requests, onRequ
             <TableRow>
               <TableHead>Estado</TableHead>
               <TableHead>Nombre</TableHead>
+              <TableHead>Tracking</TableHead>
               <TableHead>Grupo</TableHead>
               <TableHead>Asignado a</TableHead>
               <TableHead>Prioridad</TableHead>
@@ -445,6 +447,11 @@ export function RequestsListView({ statuses, types, priorities, requests, onRequ
                         <div className="font-semibold leading-tight">{request.title}</div>
                         <div className="mt-1 text-xs text-muted-foreground">ID: {request.id}</div>
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="rounded-md bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-700">
+                        {request.tracking_code ?? "-"}
+                      </span>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {request.type_name ?? "-"}
@@ -507,7 +514,7 @@ export function RequestsListView({ statuses, types, priorities, requests, onRequ
               })
             ) : (
               <TableRow>
-                <TableCell colSpan={7} className="h-28 text-center text-muted-foreground">
+                <TableCell colSpan={8} className="h-28 text-center text-muted-foreground">
                   No se encontraron solicitudes.
                 </TableCell>
               </TableRow>
