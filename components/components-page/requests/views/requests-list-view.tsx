@@ -340,7 +340,7 @@ export function RequestsListView({ statuses, types, priorities, requests, onRequ
               <Input
                 value={filters.search}
                 onChange={(event) => updateFilter({ search: event.target.value })}
-                placeholder="Buscar por nombre, ID o codigo..."
+                placeholder="Buscar por ID, codigo o requerimiento..."
                 className="h-9 rounded-lg pl-9"
               />
             </div>
@@ -424,7 +424,7 @@ export function RequestsListView({ statuses, types, priorities, requests, onRequ
           <TableHeader className="bg-muted/20">
             <TableRow>
               <TableHead>Estado</TableHead>
-              <TableHead>Nombre</TableHead>
+              <TableHead>Requerimiento</TableHead>
               <TableHead>Tracking</TableHead>
               <TableHead>Grupo</TableHead>
               <TableHead>Asignado a</TableHead>
