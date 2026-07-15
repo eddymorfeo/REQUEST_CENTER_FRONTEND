@@ -80,10 +80,6 @@ function pickCurrentAssigneeId(assignments: RequestAssignmentItem[]): string | n
   return active[0].assigned_to ?? null;
 }
 
-function isAdminRole(roleCode?: string | null) {
-  return roleCode === "ADMIN" || roleCode === "ADMINISTRADOR";
-}
-
 function normalizeFiles(files: FileList | null): File[] {
   if (!files) return [];
   return Array.from(files);
@@ -198,7 +194,12 @@ export function RequestDetailPage() {
   const requestId = params.id;
 
   const { user } = useAuth();
-  const isAdmin = isAdminRole(user?.roleCode);
+  const canAssignRequests = Boolean(user?.capabilities?.canAssignRequests);
+  const canDeleteRequests = Boolean(user?.capabilities?.canDeleteRequests);
+  const canChangeAnyRequestStatus = Boolean(user?.capabilities?.canChangeAnyRequestStatus);
+  const canChangeAssignedRequestStatus = Boolean(user?.capabilities?.canChangeAssignedRequestStatus);
+  const canAttachFilesToAnyRequest = Boolean(user?.capabilities?.canAttachFilesToAnyRequest);
+  const canAttachFilesToAssignedRequest = Boolean(user?.capabilities?.canAttachFilesToAssignedRequest);
 
   const [isLoading, setIsLoading] = React.useState(true);
   const [isDeleting, setIsDeleting] = React.useState(false);
@@ -207,6 +208,7 @@ export function RequestDetailPage() {
   const [request, setRequest] = React.useState<RequestItem | null>(null);
   const [statuses, setStatuses] = React.useState<RequestStatus[]>([]);
   const [users, setUsers] = React.useState<UserItem[]>([]);
+  const [assignableUsers, setAssignableUsers] = React.useState<UserItem[]>([]);
   const [assigneeId, setAssigneeId] = React.useState<string | null>(null);
   const [attachments, setAttachments] = React.useState<RequestAttachmentItem[]>([]);
   const [selectedFiles, setSelectedFiles] = React.useState<File[]>([]);
@@ -226,11 +228,15 @@ export function RequestDetailPage() {
 
   const canEdit = React.useMemo(() => {
     if (!user || !request) return false;
-    if (isAdmin) return true;
-    return Boolean(assigneeId && assigneeId === user.id);
-  }, [user, isAdmin, assigneeId, request]);
+    if (canChangeAnyRequestStatus) return true;
+    return Boolean(canChangeAssignedRequestStatus && assigneeId && assigneeId === user.id);
+  }, [user, canChangeAnyRequestStatus, canChangeAssignedRequestStatus, assigneeId, request]);
 
-  const canAttachRequestFiles = canEdit;
+  const canAttachRequestFiles = React.useMemo(() => {
+    if (!user || !request) return false;
+    if (canAttachFilesToAnyRequest) return true;
+    return Boolean(canAttachFilesToAssignedRequest && assigneeId && assigneeId === user.id);
+  }, [user, request, canAttachFilesToAnyRequest, canAttachFilesToAssignedRequest, assigneeId]);
 
   const loadAssignments = React.useCallback(async () => {
     const asgRes = await requestAssignmentsApi.listByRequestId(requestId);
@@ -253,10 +259,11 @@ export function RequestDetailPage() {
   const load = React.useCallback(async () => {
     setIsLoading(true);
     try {
-      const [reqRes, stRes, usersRes] = await Promise.all([
+      const [reqRes, stRes, usersRes, assignableUsersRes] = await Promise.all([
         requestsApi.getById(requestId),
         requestStatusApi.getAll(),
         usersApi.listUsers(),
+        canAssignRequests ? usersApi.listAssignableUsers({ pageSize: 100 }) : Promise.resolve({ items: [] }),
       ]);
 
       const req = reqRes.data;
@@ -270,6 +277,7 @@ export function RequestDetailPage() {
       setStatuses(activeStatuses);
 
       setUsers((usersRes.items ?? []).filter((u) => u.is_active));
+      setAssignableUsers((assignableUsersRes.items ?? []).filter((u) => u.is_active));
 
       await Promise.all([loadAssignments(), loadAttachments()]);
     } catch (error: unknown) {
@@ -281,14 +289,14 @@ export function RequestDetailPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [requestId, loadAssignments, loadAttachments]);
+  }, [requestId, canAssignRequests, loadAssignments, loadAttachments]);
 
   React.useEffect(() => {
     void load();
   }, [load]);
 
   const onAssign = async () => {
-    if (!isAdmin || !request) return;
+    if (!canAssignRequests || !request) return;
 
     if (!selectedAssignee) {
       await alerts.error("Asignación requerida", "Selecciona un usuario para asignar.");
@@ -391,8 +399,8 @@ export function RequestDetailPage() {
   };
 
   const onDeleteAttachment = async (attachment: RequestAttachmentItem) => {
-    if (!isAdmin) {
-      await alerts.error("Acción no permitida", "Solo ADMIN puede eliminar adjuntos por ahora.");
+    if (!canDeleteRequests) {
+      await alerts.error("Acción no permitida", "No tienes permisos para eliminar adjuntos.");
       return;
     }
 
@@ -465,7 +473,7 @@ export function RequestDetailPage() {
 
   // ✅ NUEVO: eliminar solicitud (solo ADMIN)
   const onDelete = async () => {
-    if (!isAdmin || !request) return;
+    if (!canDeleteRequests || !request) return;
 
     const ok = await alerts.confirm(
       "Eliminar solicitud",
@@ -508,6 +516,7 @@ export function RequestDetailPage() {
   const isBusy = isDeleting || isSavingChanges;
   const requesterFullName = [request.requester_first_name, request.requester_last_name].filter(Boolean).join(" ");
   const hasRequesterData = Boolean(request.requester_id || requesterFullName || request.requester_email || request.requester_phone);
+  const hasPublicChannel = Boolean(request.requester_id && request.tracking_code);
   const prosecutorOfficeLabel = request.prosecutor_office_name ?? "No registrada";
   const regionLabel = request.prosecutor_office_region_name ?? "No registrada";
 
@@ -520,7 +529,7 @@ export function RequestDetailPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          {isAdmin ? (
+          {canDeleteRequests ? (
             <Button
               variant="destructive"
               onClick={onDelete}
@@ -610,7 +619,7 @@ export function RequestDetailPage() {
               </label>
             ) : (
               <p className="text-xs text-muted-foreground">
-                Solo el usuario asignado o ADMINISTRADOR puede adjuntar documentos a la solicitud.
+                Solo el usuario asignado o un usuario autorizado puede adjuntar documentos a la solicitud.
               </p>
             )}
             {selectedFiles.length > 0 ? (
@@ -700,7 +709,7 @@ export function RequestDetailPage() {
                         {downloadingAttachmentId === attachment.id ? "Descargando..." : "Descargar"}
                       </Button>
 
-                      {isAdmin ? (
+                      {canDeleteRequests ? (
                         <Button
                           type="button"
                           variant="ghost"
@@ -744,7 +753,9 @@ export function RequestDetailPage() {
         </Card>
 
 
-          <RequestObservationsPanel requestId={request.id} disabled={isDeleting} />
+          {hasPublicChannel ? (
+            <RequestObservationsPanel requestId={request.id} disabled={isDeleting} />
+          ) : null}
           <RequestStatusHistoryPanel
             requestId={request.id}
             refreshKey={statusHistoryRefreshKey}
@@ -807,7 +818,7 @@ export function RequestDetailPage() {
               ) : null}
             </div>
 
-            {isAdmin ? (
+            {canAssignRequests ? (
               <div className="space-y-2">
                 <Select
                   value={selectedAssignee}
@@ -818,7 +829,7 @@ export function RequestDetailPage() {
                     <SelectValue placeholder="Cambiar asignación" />
                   </SelectTrigger>
                   <SelectContent>
-                    {users.map((u) => (
+                    {assignableUsers.map((u) => (
                       <SelectItem key={u.id} value={u.id}>
                         {u.full_name}
                       </SelectItem>

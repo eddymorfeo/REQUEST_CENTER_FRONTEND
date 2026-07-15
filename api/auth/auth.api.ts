@@ -10,4 +10,12 @@ export const authApi = {
       auth: false,
     });
   },
+
+  me() {
+    return http<{ success: boolean; data: { user: LoginResponse["data"]["user"] } }>({
+      method: "GET",
+      path: "/auth/me",
+      auth: true,
+    });
+  },
 };

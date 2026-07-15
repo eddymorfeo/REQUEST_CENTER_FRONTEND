@@ -60,7 +60,7 @@ export function DataPanel({
         <div>
           <h2 className="text-lg font-bold">Informacion personal</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Manten tu informacion personal actualizada.
+            Manten tu informacion actualizada.
           </p>
         </div>
 

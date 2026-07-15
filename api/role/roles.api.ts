@@ -7,6 +7,14 @@ export type RoleItem = {
   is_active: boolean;
   created_at?: string | null;
   updated_at?: string | null;
+  permissionKeys?: string[];
+};
+
+export type PermissionItem = {
+  id: string;
+  key: string;
+  description: string;
+  created_at?: string | null;
 };
 
 export type PaginationMeta = {
@@ -27,16 +35,30 @@ export type RoleDetailResponse = {
   data: RoleItem;
 };
 
+export type PermissionsListResponse = {
+  success: boolean;
+  items: PermissionItem[];
+};
+
+export type RolePermissionsResponse = {
+  success: boolean;
+  data: {
+    permissionKeys: string[];
+  };
+};
+
 export type CreateRolePayload = {
   code: string;
   name: string;
   isActive?: boolean;
+  permissionKeys?: string[];
 };
 
 export type UpdateRolePayload = {
   code: string;
   name: string;
   isActive: boolean;
+  permissionKeys?: string[];
 };
 
 export const rolesApi = {
@@ -65,6 +87,31 @@ export const rolesApi = {
     return http<RoleDetailResponse>({
       method: "GET",
       path: `/roles/${id}`,
+      auth: true,
+    });
+  },
+
+  listPermissions() {
+    return http<PermissionsListResponse>({
+      method: "GET",
+      path: "/roles/permissions/catalog",
+      auth: true,
+    });
+  },
+
+  getRolePermissions(id: string) {
+    return http<RolePermissionsResponse>({
+      method: "GET",
+      path: `/roles/${id}/permissions`,
+      auth: true,
+    });
+  },
+
+  updateRolePermissions(id: string, permissionKeys: string[]) {
+    return http<RolePermissionsResponse>({
+      method: "PUT",
+      path: `/roles/${id}/permissions`,
+      body: { permissionKeys },
       auth: true,
     });
   },

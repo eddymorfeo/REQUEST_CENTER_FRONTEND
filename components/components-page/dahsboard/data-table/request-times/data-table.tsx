@@ -3,12 +3,10 @@
 import * as React from "react";
 import {
   ColumnFiltersState,
-  SortingState,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
-  getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 
@@ -24,17 +22,18 @@ type Props = {
 };
 
 export function RequestTimesDataTable({ rows }: Props) {
-  const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  const rowsByCreatedAt = React.useMemo(
+    () => [...(rows ?? [])].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime() || b.id.localeCompare(a.id)),
+    [rows]
+  );
 
   const table = useReactTable({
-    data: rows ?? [],
+    data: rowsByCreatedAt,
     columns: requestTimesColumns,
-    state: { sorting, columnFilters },
-    onSortingChange: setSorting,
+    state: { columnFilters },
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
   });
@@ -65,10 +64,7 @@ export function RequestTimesDataTable({ rows }: Props) {
                   {hg.headers.map((header) => (
                     <th key={header.id} className="px-3 py-2 font-semibold">
                       {header.isPlaceholder ? null : (
-                        <div
-                          className={header.column.getCanSort() ? "cursor-pointer select-none" : ""}
-                          onClick={header.column.getToggleSortingHandler()}
-                        >
+                        <div>
                           {flexRender(header.column.columnDef.header, header.getContext())}
                         </div>
                       )}

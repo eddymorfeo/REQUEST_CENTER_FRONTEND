@@ -121,7 +121,7 @@ function getAttachmentVisual(file: AttachmentVisualInput) {
 export function RequestCreatePage() {
   const router = useRouter();
   const { user } = useAuth();
-  const isAdmin = user?.roleCode === "ADMIN" || user?.roleCode === "ADMINISTRADOR";
+  const canCreateRequests = Boolean(user?.capabilities?.canAssignRequests);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const [isLoading, setIsLoading] = React.useState(true);
@@ -140,7 +140,7 @@ export function RequestCreatePage() {
   const [isDraggingFiles, setIsDraggingFiles] = React.useState(false);
 
   React.useEffect(() => {
-    if (!isAdmin) {
+    if (!canCreateRequests) {
       void (async () => {
         await alerts.error("Acceso restringido", "Solo ADMIN puede crear solicitudes.");
         router.replace("/requests?view=list");
@@ -180,7 +180,7 @@ export function RequestCreatePage() {
     };
 
     void load();
-  }, [isAdmin, router]);
+  }, [canCreateRequests, router]);
 
   async function uploadAllAttachments(requestId: string) {
     if (attachments.length === 0) return { ok: true, failed: [] as string[] };
@@ -221,7 +221,7 @@ export function RequestCreatePage() {
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (!isAdmin) return;
+    if (!canCreateRequests) return;
 
     if (!title.trim()) {
       await alerts.error("Falta titulo", "Debes ingresar un titulo.");
@@ -283,7 +283,7 @@ export function RequestCreatePage() {
     }
   }
 
-  if (!isAdmin) return null;
+  if (!canCreateRequests) return null;
 
   if (isLoading) {
     return <div className="p-4 text-sm text-muted-foreground">Cargando formulario...</div>;

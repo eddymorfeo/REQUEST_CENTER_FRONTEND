@@ -40,7 +40,7 @@ export function RequestAttachmentsPanel({
   onCountChange,
 }: Props) {
   const { user } = useAuth();
-  const isAdmin = user?.roleCode === "ADMIN";
+  const canDeleteAttachments = Boolean(user?.capabilities?.canDeleteRequests);
 
   const [items, setItems] = React.useState<RequestAttachmentItem[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
@@ -133,7 +133,7 @@ export function RequestAttachmentsPanel({
   };
 
   const onDelete = async (attachment: RequestAttachmentItem) => {
-    if (!isAdmin) {
+    if (!canDeleteAttachments) {
       await alerts.error("Acción no permitida", "Solo ADMIN puede eliminar adjuntos por ahora.");
       return;
     }
@@ -215,7 +215,7 @@ export function RequestAttachmentsPanel({
                   {isDownloadingId === a.id ? "Descargando..." : "Descargar"}
                 </Button>
 
-                {isAdmin ? (
+                {canDeleteAttachments ? (
                   <Button
                     variant="destructive"
                     size="sm"

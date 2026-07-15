@@ -170,6 +170,15 @@ function formatDateTime(value?: string | null) {
   };
 }
 
+function compareByCreatedAtDesc(a: RequestItem, b: RequestItem) {
+  const aTime = new Date(a.created_at).getTime();
+  const bTime = new Date(b.created_at).getTime();
+  const safeATime = Number.isNaN(aTime) ? 0 : aTime;
+  const safeBTime = Number.isNaN(bTime) ? 0 : bTime;
+
+  return safeBTime - safeATime || b.id.localeCompare(a.id);
+}
+
 function FilterSelect({
   label,
   value,
@@ -197,7 +206,7 @@ function FilterSelect({
 export function RequestsListView({ statuses, types, priorities, requests, onRequestDeleted }: Props) {
   const router = useRouter();
   const { user } = useAuth();
-  const canDeleteRequests = user?.roleCode === "ADMIN" || user?.roleCode === "ADMINISTRADOR";
+  const canDeleteRequests = Boolean(user?.capabilities?.canDeleteRequests);
   const [assigneeMap, setAssigneeMap] = React.useState<Record<string, AssigneeInfo>>({});
   const [users, setUsers] = React.useState<UserItem[]>([]);
   const [filters, setFilters] = React.useState<FiltersState>(initialFilters);
@@ -297,7 +306,7 @@ export function RequestsListView({ statuses, types, priorities, requests, onRequ
       const matchesDate = sameOrAfter(request.created_at, filters.dateFrom) && sameOrBefore(request.created_at, filters.dateTo);
 
       return matchesSearch && matchesStatus && matchesType && matchesAssignee && matchesPriority && matchesDate;
-    });
+    }).sort(compareByCreatedAtDesc);
   }, [filters, tableData]);
 
   const pageCount = Math.max(1, Math.ceil(filteredData.length / PAGE_SIZE));
@@ -425,7 +434,7 @@ export function RequestsListView({ statuses, types, priorities, requests, onRequ
             <TableRow>
               <TableHead>Estado</TableHead>
               <TableHead>Requerimiento</TableHead>
-              <TableHead>Tracking</TableHead>
+              <TableHead>Tracking-Code</TableHead>
               <TableHead>Grupo</TableHead>
               <TableHead>Asignado a</TableHead>
               <TableHead>Prioridad</TableHead>

@@ -4,8 +4,6 @@ import {
   Check,
   Eye,
   EyeOff,
-  Info,
-  KeyRound,
   LoaderCircle,
   LockKeyhole,
   ShieldCheck,
@@ -190,15 +188,12 @@ export function SecurityPanel({
       <Card className="rounded-xl p-6">
         <div>
           <h2 className="text-base font-bold">Cambiar contrasena</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Define una nueva contrasena para proteger el acceso a tu cuenta.
-          </p>
         </div>
 
         <div className="grid gap-5 lg:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="newPassword" className="text-sm font-semibold">
-              Nueva contrasena
+              Nueva contraseña
             </Label>
             <PasswordInput
               id="newPassword"
@@ -206,7 +201,7 @@ export function SecurityPanel({
               onChange={onNewPasswordChange}
               visible={showNewPassword}
               onVisibleChange={onShowNewPasswordChange}
-              placeholder="Ingresa tu nueva contrasena"
+              placeholder="Nueva contraseña"
               disabled={isSaving}
             />
             <p className="text-xs text-muted-foreground">Minimo 8 caracteres.</p>
@@ -214,7 +209,7 @@ export function SecurityPanel({
 
           <div className="space-y-2">
             <Label htmlFor="confirmPassword" className="text-sm font-semibold">
-              Confirmar nueva contrasena
+              Confirmar contraseña
             </Label>
             <PasswordInput
               id="confirmPassword"
@@ -222,7 +217,7 @@ export function SecurityPanel({
               onChange={onConfirmPasswordChange}
               visible={showConfirmPassword}
               onVisibleChange={onShowConfirmPasswordChange}
-              placeholder="Confirma tu nueva contrasena"
+              placeholder="Confirmar contraseña"
               disabled={isSaving}
             />
           </div>
@@ -232,11 +227,7 @@ export function SecurityPanel({
 
         <div className="flex flex-col gap-4 rounded-lg border bg-muted/20 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex gap-3 text-sm text-muted-foreground">
-            <Info className="mt-0.5 size-4 shrink-0 text-blue-600" />
-            <span>
-              No necesitas ingresar tu contrasena actual. El cambio se aplica solo cuando ambas contrasenas cumplen los
-              requisitos.
-            </span>
+
           </div>
           <Button
             type="button"
@@ -253,9 +244,7 @@ export function SecurityPanel({
       <div className="space-y-5">
         <Card className="rounded-xl p-6">
           <div className="flex items-center gap-3">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600">
-              <KeyRound className="size-5" />
-            </div>
+
             <div>
               <h2 className="text-base font-bold">Requisitos de contrasena</h2>
               <p className="mt-1 text-sm text-muted-foreground">Verifica tu nueva contrasena antes de guardar.</p>
@@ -269,9 +258,7 @@ export function SecurityPanel({
 
         <Card className="rounded-xl p-6">
           <div className="flex items-center gap-3">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
-              <ShieldCheck className="size-5" />
-            </div>
+
             <div>
               <h2 className="text-base font-bold">Buenas practicas</h2>
               <p className="mt-1 text-sm text-muted-foreground">Recomendaciones utiles para reducir riesgos.</p>

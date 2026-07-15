@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { getErrorMessage } from "@/lib/errors/get-error-message";
 
 import type { RoleTableRow } from "../data-table/columns";
+import type { PermissionItem } from "@/api/role/roles.api";
 
 type Mode = "create" | "edit";
 
@@ -25,8 +26,10 @@ type Props = {
   open: boolean;
   mode: Mode;
   initial?: RoleTableRow | null;
+  permissions: PermissionItem[];
+  initialPermissionKeys: string[];
   onOpenChange: (open: boolean) => void;
-  onSubmit: (payload: { code: string; name: string; isActive: boolean }) => Promise<void>;
+  onSubmit: (payload: { code: string; name: string; isActive: boolean; permissionKeys: string[] }) => Promise<void>;
 };
 
 function Field({
@@ -81,12 +84,61 @@ function SegmentButton({
   );
 }
 
-export function RoleFormDialog({ open, mode, initial, onOpenChange, onSubmit }: Props) {
+function groupLabel(permissionKey: string) {
+  if (permissionKey.startsWith("requests.")) return "Solicitudes";
+  if (permissionKey.startsWith("settings.")) return "Administracion";
+  return "General";
+}
+
+const permissionLabels: Record<string, string> = {
+  "requests.assign": "Asignar solicitudes",
+  "requests.receive_assignment": "Recibir asignaciones",
+  "requests.change_status_any": "Cambiar estado de cualquier solicitud",
+  "requests.change_status_assigned": "Cambiar estado de solicitudes asignadas",
+  "requests.delete": "Eliminar solicitudes",
+  "requests.attach_files_any": "Adjuntar archivos a cualquier solicitud",
+  "requests.attach_files_assigned": "Adjuntar archivos a solicitudes asignadas",
+  "requests.public_thread.view": "Ver canal publico",
+  "requests.public_thread.message": "Enviar mensajes al canal publico",
+  "settings.users.manage": "Administrar usuarios",
+  "settings.catalogs.manage": "Administrar catalogos",
+};
+
+function permissionTitle(permissionKey: string) {
+  const label = permissionLabels[permissionKey];
+  if (label) return label;
+
+  const tail = permissionKey.split(".").slice(1).join(".");
+  return tail
+    .replaceAll("_", " ")
+    .replaceAll(".", " / ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function groupPermissions(permissions: PermissionItem[]) {
+  return permissions.reduce<Record<string, PermissionItem[]>>((acc, permission) => {
+    const label = groupLabel(permission.key);
+    acc[label] = acc[label] ?? [];
+    acc[label].push(permission);
+    return acc;
+  }, {});
+}
+
+export function RoleFormDialog({
+  open,
+  mode,
+  initial,
+  permissions,
+  initialPermissionKeys,
+  onOpenChange,
+  onSubmit,
+}: Props) {
   const isEdit = mode === "edit";
 
   const [code, setCode] = React.useState("");
   const [name, setName] = React.useState("");
   const [isActive, setIsActive] = React.useState(true);
+  const [permissionKeys, setPermissionKeys] = React.useState<string[]>([]);
 
   const [isSaving, setIsSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -99,12 +151,23 @@ export function RoleFormDialog({ open, mode, initial, onOpenChange, onSubmit }: 
       setCode(initial.code ?? "");
       setName(initial.name ?? "");
       setIsActive(Boolean(initial.is_active));
+      setPermissionKeys(initialPermissionKeys);
     } else {
       setCode("");
       setName("");
       setIsActive(true);
+      setPermissionKeys([]);
     }
-  }, [open, isEdit, initial]);
+  }, [open, isEdit, initial, initialPermissionKeys]);
+
+  const groupedPermissions = React.useMemo(() => groupPermissions(permissions), [permissions]);
+
+  function togglePermission(key: string, checked: boolean) {
+    setPermissionKeys((current) => {
+      if (checked) return [...new Set([...current, key])].sort();
+      return current.filter((item) => item !== key);
+    });
+  }
 
   async function handleSave() {
     setError(null);
@@ -114,7 +177,7 @@ export function RoleFormDialog({ open, mode, initial, onOpenChange, onSubmit }: 
 
     setIsSaving(true);
     try {
-      await onSubmit({ code: code.trim(), name: name.trim(), isActive });
+      await onSubmit({ code: code.trim(), name: name.trim(), isActive, permissionKeys });
       onOpenChange(false);
     } catch (error: unknown) {
       setError(getErrorMessage(error) || "No se pudo guardar el rol.");
@@ -125,8 +188,8 @@ export function RoleFormDialog({ open, mode, initial, onOpenChange, onSubmit }: 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="overflow-hidden rounded-2xl p-0 sm:max-w-[620px]">
-        <div className="px-6 pb-5 pt-6">
+      <DialogContent className="flex h-[min(92vh,820px)] flex-col overflow-hidden rounded-2xl p-0 sm:max-w-[760px]">
+        <div className="shrink-0 px-6 pb-4 pt-6">
           <DialogHeader>
             <DialogTitle className="text-xl">
               {isEdit ? "Editar rol" : "Crear rol"}
@@ -147,7 +210,7 @@ export function RoleFormDialog({ open, mode, initial, onOpenChange, onSubmit }: 
           onKeyDown={(event) => {
             if (event.key === "Enter") event.preventDefault();
           }}
-          className="space-y-5 px-6 pb-6"
+          className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 pb-6"
         >
           {error ? (
             <motion.div
@@ -210,9 +273,65 @@ export function RoleFormDialog({ open, mode, initial, onOpenChange, onSubmit }: 
               </div>
             </div>
           </div>
+
+          <div className="rounded-xl border p-5">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <div className="text-sm font-semibold">Permisos</div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Define las acciones habilitadas para los usuarios con este rol.
+                </p>
+              </div>
+              <div className="rounded-md bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
+                {permissionKeys.length} seleccionados
+              </div>
+            </div>
+
+            <div className="mt-5 space-y-5">
+              {Object.entries(groupedPermissions).map(([group, items]) => (
+                <div key={group} className="space-y-3">
+                  <div className="text-xs font-semibold uppercase text-muted-foreground">
+                    {group}
+                  </div>
+                  <div className="grid gap-2 md:grid-cols-2">
+                    {items.map((permission) => {
+                      const checked = permissionKeys.includes(permission.key);
+                      return (
+                        <label
+                          key={permission.key}
+                          className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
+                            checked ? "border-blue-200 bg-blue-50/70" : "bg-background hover:bg-muted/40"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            disabled={isSaving}
+                            onChange={(event) => togglePermission(permission.key, event.target.checked)}
+                            className="mt-1 size-4 accent-blue-600"
+                          />
+                          <span className="min-w-0">
+                            <span className="block text-sm font-semibold leading-5">
+                              {permissionTitle(permission.key)}
+                            </span>
+                            <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                              {permission.description}
+                            </span>
+                            <span className="mt-2 block break-all font-mono text-[11px] text-muted-foreground">
+                              {permission.key}
+                            </span>
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </form>
 
-        <div className="border-t bg-background px-6 py-5">
+        <div className="shrink-0 border-t bg-background px-6 py-4">
           <DialogFooter className="gap-2">
             <Button
               type="button"

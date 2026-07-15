@@ -39,13 +39,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     const token = tokenStorage.getToken();
-    const user = tokenStorage.getUser<AuthUser>();
+    const storedUser = tokenStorage.getUser<AuthUser>();
 
-    setState({
-      user: user ?? null,
-      isAuthenticated: Boolean(token && user),
-      isBootstrapping: false,
-    });
+    if (!token) {
+      setState({
+        user: null,
+        isAuthenticated: false,
+        isBootstrapping: false,
+      });
+      return;
+    }
+
+    let cancelled = false;
+
+    if (storedUser) {
+      setState({
+        user: storedUser,
+        isAuthenticated: true,
+        isBootstrapping: true,
+      });
+    }
+
+    authApi
+      .me()
+      .then((res) => {
+        if (cancelled) return;
+        const user = res.data.user;
+        tokenStorage.setUser(user);
+        setState({
+          user,
+          isAuthenticated: true,
+          isBootstrapping: false,
+        });
+      })
+      .catch(() => {
+        if (cancelled) return;
+        tokenStorage.clear();
+        setState({
+          user: null,
+          isAuthenticated: false,
+          isBootstrapping: false,
+        });
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const login = React.useCallback(

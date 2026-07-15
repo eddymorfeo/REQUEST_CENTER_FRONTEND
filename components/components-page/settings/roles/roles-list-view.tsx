@@ -14,7 +14,7 @@ import {
   UsersRound,
 } from "lucide-react";
 
-import { rolesApi } from "@/api/role/roles.api";
+import { rolesApi, type PermissionItem } from "@/api/role/roles.api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -60,6 +60,7 @@ function pickItems<T>(res: unknown): T[] {
 
 export default function RolesListView() {
   const [rows, setRows] = React.useState<RoleTableRow[]>([]);
+  const [permissions, setPermissions] = React.useState<PermissionItem[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -70,6 +71,7 @@ export default function RolesListView() {
   const [openForm, setOpenForm] = React.useState(false);
   const [formMode, setFormMode] = React.useState<"create" | "edit">("create");
   const [selected, setSelected] = React.useState<RoleTableRow | null>(null);
+  const [selectedPermissionKeys, setSelectedPermissionKeys] = React.useState<string[]>([]);
   const [openDelete, setOpenDelete] = React.useState(false);
 
   const load = React.useCallback(async () => {
@@ -77,9 +79,13 @@ export default function RolesListView() {
     setError(null);
 
     try {
-      const res = await rolesApi.listRoles();
+      const [res, permissionsRes] = await Promise.all([
+        rolesApi.listRoles(),
+        rolesApi.listPermissions(),
+      ]);
       const items = pickItems<RoleTableRow>(res);
       setRows(items.sort((a, b) => a.name.localeCompare(b.name, "es", { sensitivity: "base" })));
+      setPermissions(permissionsRes.items ?? []);
     } catch (error: unknown) {
       setError(getErrorMessage(error) || "Error cargando roles.");
     } finally {
@@ -124,13 +130,22 @@ export default function RolesListView() {
   function handleOpenCreate() {
     setFormMode("create");
     setSelected(null);
+    setSelectedPermissionKeys([]);
     setOpenForm(true);
   }
 
-  function handleOpenEdit(row: RoleTableRow) {
+  async function handleOpenEdit(row: RoleTableRow) {
     setFormMode("edit");
     setSelected(row);
-    setOpenForm(true);
+    setSelectedPermissionKeys([]);
+
+    try {
+      const res = await rolesApi.getRolePermissions(row.id);
+      setSelectedPermissionKeys(res.data.permissionKeys ?? []);
+      setOpenForm(true);
+    } catch (error: unknown) {
+      setError(getErrorMessage(error) || "No se pudieron cargar los permisos del rol.");
+    }
   }
 
   function handleOpenDelete(row: RoleTableRow) {
@@ -143,12 +158,13 @@ export default function RolesListView() {
     setStatusFilter("all");
   }
 
-  async function handleSubmitForm(payload: { code: string; name: string; isActive: boolean }) {
+  async function handleSubmitForm(payload: { code: string; name: string; isActive: boolean; permissionKeys: string[] }) {
     if (formMode === "create") {
       await rolesApi.createRole({
         code: payload.code,
         name: payload.name,
         isActive: payload.isActive,
+        permissionKeys: payload.permissionKeys,
       });
     } else {
       if (!selected?.id) throw new Error("No hay rol seleccionado para editar.");
@@ -157,6 +173,7 @@ export default function RolesListView() {
         code: payload.code,
         name: payload.name,
         isActive: payload.isActive,
+        permissionKeys: payload.permissionKeys,
       });
     }
 
@@ -352,6 +369,8 @@ export default function RolesListView() {
         open={openForm}
         mode={formMode}
         initial={selected}
+        permissions={permissions}
+        initialPermissionKeys={selectedPermissionKeys}
         onOpenChange={setOpenForm}
         onSubmit={handleSubmitForm}
       />

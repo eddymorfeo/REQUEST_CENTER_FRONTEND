@@ -15,7 +15,7 @@ export function RequestsPage() {
   const { isLoading, statuses, types, priorities, requests, refresh } = useRequestsData();
 
   const { user } = useAuth();
-  const isAdmin = user?.roleCode === "ADMIN" || user?.roleCode === "ADMINISTRADOR";
+  const canCreateRequests = Boolean(user?.capabilities?.canAssignRequests);
 
   if (isLoading) return <RequestsSkeleton />;
 
@@ -23,7 +23,7 @@ export function RequestsPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Solicitudes</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Requerimientos</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Visualiza todas las solicitudes registradas.
           </p>
@@ -35,7 +35,7 @@ export function RequestsPage() {
             Actualizar
           </Button>
 
-          {isAdmin ? (
+          {canCreateRequests ? (
             <Button
               onClick={() => router.push("/requests/new")}
               className="gap-2 bg-blue-600 text-white shadow-sm hover:bg-blue-700"

@@ -5,5 +5,5 @@ import type { AuthUser } from "@/types/auth/auth.types";
 
 export function isAdmin(): boolean {
   const user = tokenStorage.getUser<AuthUser>();
-  return user?.roleCode === "ADMIN";
+  return Boolean(user?.capabilities?.canManageUsers || user?.capabilities?.canManageCatalogs);
 }

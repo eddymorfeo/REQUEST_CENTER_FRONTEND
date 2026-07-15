@@ -74,6 +74,19 @@ export const usersApi = {
     });
   },
 
+  listAssignableUsers(params?: { page?: number; pageSize?: number }) {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.set("page", String(params.page));
+    if (params?.pageSize) searchParams.set("pageSize", String(params.pageSize));
+
+    const qs = searchParams.toString();
+    return http<UsersListResponse>({
+      method: "GET",
+      path: qs ? `/users/assignable?${qs}` : "/users/assignable",
+      auth: true,
+    });
+  },
+
   listUsersPaged(params?: { page?: number; pageSize?: number }) {
     const searchParams = new URLSearchParams();
     if (params?.page) searchParams.set("page", String(params.page));
