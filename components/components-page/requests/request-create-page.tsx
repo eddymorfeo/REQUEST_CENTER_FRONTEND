@@ -136,6 +136,12 @@ export function RequestCreatePage() {
   const [description, setDescription] = React.useState("");
   const [requestTypeId, setRequestTypeId] = React.useState("");
   const [priorityId, setPriorityId] = React.useState("");
+  const [respondToAnotherPerson, setRespondToAnotherPerson] = React.useState(false);
+  const [requesterFirstName, setRequesterFirstName] = React.useState("");
+  const [requesterLastName, setRequesterLastName] = React.useState("");
+  const [requesterEmail, setRequesterEmail] = React.useState("");
+  const [requesterPhone, setRequesterPhone] = React.useState("");
+  const [requesterPosition, setRequesterPosition] = React.useState("");
   const [attachments, setAttachments] = React.useState<File[]>([]);
   const [isDraggingFiles, setIsDraggingFiles] = React.useState(false);
 
@@ -243,6 +249,16 @@ export function RequestCreatePage() {
       await alerts.error("No se pudo determinar el estado inicial", "No existe el estado UNASSIGNED en el sistema.");
       return;
     }
+    if (
+      respondToAnotherPerson &&
+      (!requesterFirstName.trim() || !requesterLastName.trim() || !requesterEmail.trim())
+    ) {
+      await alerts.error(
+        "Faltan datos del destinatario",
+        "Debes ingresar nombre, apellido y correo de la persona que recibira la respuesta."
+      );
+      return;
+    }
 
     const ok = await alerts.confirm("Crear solicitud", "Confirmas crear esta solicitud?");
     if (!ok) return;
@@ -256,6 +272,15 @@ export function RequestCreatePage() {
         statusId: unassignedStatusId,
         requestTypeId,
         priorityId,
+        requester: respondToAnotherPerson
+          ? {
+              firstName: requesterFirstName.trim(),
+              lastName: requesterLastName.trim(),
+              email: requesterEmail.trim().toLowerCase(),
+              phone: requesterPhone.trim() || undefined,
+              position: requesterPosition.trim() || undefined,
+            }
+          : undefined,
       });
 
       if (!res?.success || !res?.data?.id) {
@@ -388,6 +413,54 @@ export function RequestCreatePage() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="rounded-xl p-5">
+          <div className="flex items-start gap-3">
+            <UsersRound className="mt-0.5 size-5 text-blue-600" />
+            <div className="flex-1">
+              <h2 className="text-base font-semibold">Destinatario de la respuesta</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Por defecto, la respuesta corresponde al usuario que crea la solicitud.
+              </p>
+
+              <label className="mt-4 flex cursor-pointer items-center gap-3 rounded-lg border p-3">
+                <input
+                  type="checkbox"
+                  checked={respondToAnotherPerson}
+                  onChange={(event) => setRespondToAnotherPerson(event.target.checked)}
+                  disabled={isBusy}
+                  className="size-4 rounded border-border"
+                />
+                <span className="text-sm font-medium">La respuesta debe enviarse a otra persona</span>
+              </label>
+
+              {respondToAnotherPerson ? (
+                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold">Nombre *</label>
+                    <Input value={requesterFirstName} onChange={(event) => setRequesterFirstName(event.target.value)} disabled={isBusy} />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold">Apellido *</label>
+                    <Input value={requesterLastName} onChange={(event) => setRequesterLastName(event.target.value)} disabled={isBusy} />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold">Correo *</label>
+                    <Input type="email" value={requesterEmail} onChange={(event) => setRequesterEmail(event.target.value)} disabled={isBusy} />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold">Telefono</label>
+                    <Input value={requesterPhone} onChange={(event) => setRequesterPhone(event.target.value)} disabled={isBusy} />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="text-sm font-semibold">Cargo</label>
+                    <Input value={requesterPosition} onChange={(event) => setRequesterPosition(event.target.value)} disabled={isBusy} />
+                  </div>
+                </div>
+              ) : null}
             </div>
           </div>
         </Card>

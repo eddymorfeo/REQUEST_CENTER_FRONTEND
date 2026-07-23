@@ -8,6 +8,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Eye,
+  MailCheck,
+  RotateCcw,
   MoreVertical,
   Search,
   Trash2,
@@ -15,6 +17,7 @@ import {
 } from "lucide-react";
 
 import { requestAssignmentsApi } from "@/api/requests/request-assignments.api";
+import { boardApi } from "@/api/requests/board.api";
 import { requestsApi } from "@/api/requests/requests.api";
 import type { RequestPriorityItem } from "@/api/requests/request-priorities.api";
 import type { RequestTypeItem } from "@/api/requests/request-types.api";
@@ -86,12 +89,14 @@ type FiltersState = {
   typeId: string;
   assigneeId: string;
   priorityId: string;
+  responseState: string;
   dateFrom: string;
   dateTo: string;
 };
 
 const ALL_VALUE = "__all";
-const PAGE_SIZE = 8;
+const DEFAULT_PAGE_SIZE = 10;
+const PAGE_SIZE_OPTIONS = [5, 10, 15, 25] as const;
 
 const initialFilters: FiltersState = {
   search: "",
@@ -99,6 +104,7 @@ const initialFilters: FiltersState = {
   typeId: ALL_VALUE,
   assigneeId: ALL_VALUE,
   priorityId: ALL_VALUE,
+  responseState: ALL_VALUE,
   dateFrom: "",
   dateTo: "",
 };
@@ -155,6 +161,7 @@ function hasActiveFilters(filters: FiltersState) {
     filters.typeId !== ALL_VALUE ||
     filters.assigneeId !== ALL_VALUE ||
     filters.priorityId !== ALL_VALUE ||
+    filters.responseState !== ALL_VALUE ||
     filters.dateFrom ||
     filters.dateTo
   );
@@ -177,6 +184,21 @@ function compareByCreatedAtDesc(a: RequestItem, b: RequestItem) {
   const safeBTime = Number.isNaN(bTime) ? 0 : bTime;
 
   return safeBTime - safeATime || b.id.localeCompare(a.id);
+}
+
+function responseLabel(request: RequestItem) {
+  switch (request.response_state) {
+    case "PENDING": return { text: "Pendiente", className: "bg-amber-50 text-amber-700" };
+    case "SENT":
+      return {
+        text: request.response_delivery_channel === "SYSTEM_EMAIL" ? "Sistema" : "Externo",
+        className: "bg-emerald-50 text-emerald-700",
+      };
+    case "FAILED": return { text: "Error de envio", className: "bg-red-50 text-red-700" };
+    case "UNCONFIRMED": return { text: "Sin confirmar", className: "bg-slate-100 text-slate-700" };
+    case "MISSING_RECIPIENT": return { text: "Falta destinatario", className: "bg-red-50 text-red-700" };
+    default: return { text: "No aplica", className: "bg-slate-50 text-slate-500" };
+  }
 }
 
 function FilterSelect({
@@ -211,8 +233,10 @@ export function RequestsListView({ statuses, types, priorities, requests, onRequ
   const [users, setUsers] = React.useState<UserItem[]>([]);
   const [filters, setFilters] = React.useState<FiltersState>(initialFilters);
   const [pageIndex, setPageIndex] = React.useState(0);
+  const [pageSize, setPageSize] = React.useState(DEFAULT_PAGE_SIZE);
   const [isResolving, setIsResolving] = React.useState(false);
   const [isDeletingId, setIsDeletingId] = React.useState<string | null>(null);
+  const [isUpdatingResponseId, setIsUpdatingResponseId] = React.useState<string | null>(null);
 
   const statusNameById = React.useMemo(() => {
     const map = new Map<string, string>();
@@ -303,17 +327,18 @@ export function RequestsListView({ statuses, types, priorities, requests, onRequ
         (filters.assigneeId === "__unassigned" && !request.assigneeInfo.id) ||
         request.assigneeInfo.id === filters.assigneeId;
       const matchesPriority = filters.priorityId === ALL_VALUE || request.priority_id === filters.priorityId;
+      const matchesResponse = filters.responseState === ALL_VALUE || request.response_state === filters.responseState;
       const matchesDate = sameOrAfter(request.created_at, filters.dateFrom) && sameOrBefore(request.created_at, filters.dateTo);
 
-      return matchesSearch && matchesStatus && matchesType && matchesAssignee && matchesPriority && matchesDate;
+      return matchesSearch && matchesStatus && matchesType && matchesAssignee && matchesPriority && matchesResponse && matchesDate;
     }).sort(compareByCreatedAtDesc);
   }, [filters, tableData]);
 
-  const pageCount = Math.max(1, Math.ceil(filteredData.length / PAGE_SIZE));
+  const pageCount = Math.max(1, Math.ceil(filteredData.length / pageSize));
   const safePageIndex = Math.min(pageIndex, pageCount - 1);
-  const pageRows = filteredData.slice(safePageIndex * PAGE_SIZE, safePageIndex * PAGE_SIZE + PAGE_SIZE);
-  const showingFrom = filteredData.length ? safePageIndex * PAGE_SIZE + 1 : 0;
-  const showingTo = Math.min((safePageIndex + 1) * PAGE_SIZE, filteredData.length);
+  const pageRows = filteredData.slice(safePageIndex * pageSize, safePageIndex * pageSize + pageSize);
+  const showingFrom = filteredData.length ? safePageIndex * pageSize + 1 : 0;
+  const showingTo = Math.min((safePageIndex + 1) * pageSize, filteredData.length);
 
   async function handleDelete(request: RequestRow) {
     const ok = await alerts.confirm(
@@ -334,6 +359,40 @@ export function RequestsListView({ statuses, types, priorities, requests, onRequ
     }
   }
 
+  async function handleMarkResponded(request: RequestRow) {
+    const recipient = request.response_sent_to || request.requester_email || request.creator_email || "el destinatario";
+    const ok = await alerts.confirm(
+      "Confirmar envío",
+      `Confirma que la respuesta final fue enviada externamente a ${recipient}.`
+    );
+    if (!ok) return;
+    setIsUpdatingResponseId(request.id);
+    try {
+      await boardApi.markFinalResponseSent(request.id);
+      await alerts.toastSuccess("Envío confirmado");
+      onRequestDeleted();
+    } catch (error: unknown) {
+      await alerts.error("No se pudo marcar la respuesta", getErrorMessage(error));
+    } finally {
+      setIsUpdatingResponseId(null);
+    }
+  }
+
+  async function handleRevertResponse(request: RequestRow) {
+    const ok = await alerts.confirm("Revertir respuesta", "La solicitud volvera a quedar pendiente de respuesta.");
+    if (!ok) return;
+    setIsUpdatingResponseId(request.id);
+    try {
+      await boardApi.revertFinalResponse(request.id);
+      await alerts.toastSuccess("Respuesta revertida a pendiente");
+      onRequestDeleted();
+    } catch (error: unknown) {
+      await alerts.error("No se pudo revertir la respuesta", getErrorMessage(error));
+    } finally {
+      setIsUpdatingResponseId(null);
+    }
+  }
+
   function updateFilter(patch: Partial<FiltersState>) {
     setFilters((current) => ({ ...current, ...patch }));
   }
@@ -341,7 +400,7 @@ export function RequestsListView({ statuses, types, priorities, requests, onRequ
   return (
     <div className="space-y-5">
       <div className="rounded-xl border bg-background p-5 shadow-sm">
-        <div className="grid gap-4 xl:grid-cols-[minmax(220px,1.4fr)_repeat(6,minmax(140px,1fr))]">
+        <div className="grid gap-4 xl:grid-cols-[minmax(220px,1.4fr)_repeat(7,minmax(130px,1fr))]">
           <div className="space-y-2">
             <div className="text-xs font-semibold text-muted-foreground">Buscar</div>
             <div className="relative">
@@ -386,6 +445,16 @@ export function RequestsListView({ statuses, types, priorities, requests, onRequ
             ))}
           </FilterSelect>
 
+          <FilterSelect label="Respuesta" value={filters.responseState} onChange={(value) => updateFilter({ responseState: value })}>
+            <SelectItem value={ALL_VALUE}>Todas</SelectItem>
+            <SelectItem value="PENDING">Pendientes</SelectItem>
+            <SelectItem value="SENT">Respondidas</SelectItem>
+            <SelectItem value="UNCONFIRMED">Sin confirmar</SelectItem>
+            <SelectItem value="FAILED">Con error</SelectItem>
+            <SelectItem value="MISSING_RECIPIENT">Falta destinatario</SelectItem>
+            <SelectItem value="NOT_APPLICABLE">No aplica</SelectItem>
+          </FilterSelect>
+
           <div className="space-y-2">
             <div className="text-xs font-semibold text-muted-foreground">Fecha de creacion</div>
             <Input
@@ -422,13 +491,6 @@ export function RequestsListView({ statuses, types, priorities, requests, onRequ
       </div>
 
       <div className="overflow-hidden rounded-xl border bg-background shadow-sm">
-        <div className="flex items-center justify-between border-b px-5 py-4">
-          <div className="text-sm font-semibold">
-            {filteredData.length} {filteredData.length === 1 ? "solicitud" : "solicitudes"}
-          </div>
-          {isResolving ? <div className="text-xs text-muted-foreground">Resolviendo asignaciones...</div> : null}
-        </div>
-
         <Table>
           <TableHeader className="bg-muted/20">
             <TableRow>
@@ -438,6 +500,7 @@ export function RequestsListView({ statuses, types, priorities, requests, onRequ
               <TableHead>Grupo</TableHead>
               <TableHead>Asignado a</TableHead>
               <TableHead>Prioridad</TableHead>
+              <TableHead>Respuesta</TableHead>
               <TableHead>Fecha de creacion</TableHead>
               <TableHead className="w-24 text-center">Acciones</TableHead>
             </TableRow>
@@ -477,6 +540,12 @@ export function RequestsListView({ statuses, types, priorities, requests, onRequ
                       <PriorityBadge value={String(request.priority_name ?? request.priority_id).toUpperCase()} />
                     </TableCell>
                     <TableCell>
+                      {(() => {
+                        const response = responseLabel(request);
+                        return <span className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${response.className}`}>{response.text}</span>;
+                      })()}
+                    </TableCell>
+                    <TableCell>
                       <div className="flex items-start gap-2 text-sm text-muted-foreground">
                         <Calendar className="mt-0.5 size-4" />
                         <div>
@@ -494,7 +563,7 @@ export function RequestsListView({ statuses, types, priorities, requests, onRequ
                               variant="ghost"
                               size="icon"
                               className="size-8"
-                              disabled={isDeletingId === request.id}
+                              disabled={isDeletingId === request.id || isUpdatingResponseId === request.id}
                               aria-label="Abrir acciones"
                             >
                               <MoreVertical className="size-4" />
@@ -505,6 +574,18 @@ export function RequestsListView({ statuses, types, priorities, requests, onRequ
                               <Eye className="mr-2 size-4" />
                               Ver
                             </DropdownMenuItem>
+                            {request.is_terminal && ["PENDING", "UNCONFIRMED"].includes(request.response_state ?? "") ? (
+                              <DropdownMenuItem onClick={() => void handleMarkResponded(request)}>
+                                <MailCheck className="mr-2 size-4" />
+                                Confirmar envío
+                              </DropdownMenuItem>
+                            ) : null}
+                            {request.response_state === "SENT" ? (
+                              <DropdownMenuItem onClick={() => void handleRevertResponse(request)}>
+                                <RotateCcw className="mr-2 size-4" />
+                                Revertir respuesta
+                              </DropdownMenuItem>
+                            ) : null}
                             {canDeleteRequests ? (
                               <DropdownMenuItem
                                 className="text-destructive focus:text-destructive"
@@ -523,7 +604,7 @@ export function RequestsListView({ statuses, types, priorities, requests, onRequ
               })
             ) : (
               <TableRow>
-                <TableCell colSpan={8} className="h-28 text-center text-muted-foreground">
+                <TableCell colSpan={9} className="h-28 text-center text-muted-foreground">
                   No se encontraron solicitudes.
                 </TableCell>
               </TableRow>
@@ -531,9 +612,32 @@ export function RequestsListView({ statuses, types, priorities, requests, onRequ
           </TableBody>
         </Table>
 
-        <div className="flex items-center justify-between gap-3 border-t px-5 py-4">
-          <div className="text-sm text-muted-foreground">
-            Mostrando {showingFrom} a {showingTo} de {filteredData.length} solicitudes
+        <div className="flex flex-col gap-3 border-t px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="text-sm text-muted-foreground">
+              Mostrando {showingFrom} a {showingTo} de {filteredData.length} solicitudes
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Registros por pagina</span>
+              <Select
+                value={String(pageSize)}
+                onValueChange={(value) => {
+                  setPageSize(Number(value));
+                  setPageIndex(0);
+                }}
+              >
+                <SelectTrigger className="h-8 w-20 rounded-lg">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent align="end">
+                  {PAGE_SIZE_OPTIONS.map((option) => (
+                    <SelectItem key={option} value={String(option)}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <Button

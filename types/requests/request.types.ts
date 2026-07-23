@@ -27,6 +27,22 @@ export type RequestItem = {
   requester_last_name?: string | null;
   requester_email?: string | null;
   requester_phone?: string | null;
+  creator_full_name?: string | null;
+  creator_email?: string | null;
+
+  final_response_id?: string | null;
+  response_status?: "PENDING" | "SENT" | "FAILED" | null;
+  response_delivery_channel?: "EXTERNAL_EMAIL" | "SYSTEM_EMAIL" | null;
+  response_sent_to?: string | null;
+  response_sent_at?: string | null;
+  response_sent_by_user_id?: string | null;
+  response_state?:
+    | "NOT_APPLICABLE"
+    | "UNCONFIRMED"
+    | "PENDING"
+    | "SENT"
+    | "FAILED"
+    | "MISSING_RECIPIENT";
 
   prosecutor_office_code?: string | null;
   prosecutor_office_name?: string | null;

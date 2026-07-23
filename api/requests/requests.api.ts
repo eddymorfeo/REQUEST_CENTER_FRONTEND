@@ -17,13 +17,25 @@ export type CreateRequestPayload = {
   statusId: string;
   requestTypeId: string;
   priorityId: string;
+  requester?: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+    position?: string;
+  };
 };
 
 export const requestsApi = {
-  getAll() {
+  getAll(params: { page?: number; pageSize?: number } = {}) {
+    const search = new URLSearchParams();
+    if (params.page) search.set("page", String(params.page));
+    if (params.pageSize) search.set("pageSize", String(params.pageSize));
+    const query = search.toString();
+
     return http<RequestsListResponse>({
       method: "GET",
-      path: "/requests",
+      path: `/requests${query ? `?${query}` : ""}`,
       auth: true,
     });
   },

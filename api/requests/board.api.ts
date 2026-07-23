@@ -18,4 +18,20 @@ export const boardApi = {
       auth: true,
     });
   },
+
+  markFinalResponseSent(requestId: string) {
+    return http<{ success: boolean }>({
+      method: "POST",
+      path: `/board/${requestId}/final-response/mark-sent`,
+      auth: true,
+    });
+  },
+
+  revertFinalResponse(requestId: string) {
+    return http<{ success: boolean }>({
+      method: "POST",
+      path: `/board/${requestId}/final-response/revert`,
+      auth: true,
+    });
+  },
 };

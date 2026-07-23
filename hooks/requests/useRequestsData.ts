@@ -30,12 +30,21 @@ export function useRequestsData() {
     setState((p) => ({ ...p, isLoading: true }));
 
     try {
-      const [statusesRes, typesRes, prioritiesRes, requestsRes] = await Promise.all([
+      const [statusesRes, typesRes, prioritiesRes, firstRequestsPage] = await Promise.all([
         requestStatusApi.getAll(),
         requestTypesApi.getAll(),
         requestPrioritiesApi.getAll(),
-        requestsApi.getAll(),
+        requestsApi.getAll({ page: 1, pageSize: 100 }),
       ]);
+
+      const totalPages = Math.max(1, firstRequestsPage.meta?.totalPages ?? 1);
+      const remainingPages = totalPages > 1
+        ? await Promise.all(
+            Array.from({ length: totalPages - 1 }, (_, index) =>
+              requestsApi.getAll({ page: index + 2, pageSize: 100 })
+            )
+          )
+        : [];
 
       const statuses = (statusesRes.items ?? [])
         .filter((s) => s.is_active)
@@ -45,7 +54,12 @@ export function useRequestsData() {
         .filter((p) => p.is_active)
         .sort((a, b) => a.sort_order - b.sort_order);
 
-      const requests = (requestsRes.items ?? []).filter((r) => r.is_active);
+      const requests = [
+        ...(firstRequestsPage.items ?? []),
+        ...remainingPages.flatMap((page) => page.items ?? []),
+      ].filter((request, index, all) =>
+        request.is_active && all.findIndex((item) => item.id === request.id) === index
+      );
 
       setState({ isLoading: false, statuses, types, priorities, requests });
     } catch (e: unknown) {

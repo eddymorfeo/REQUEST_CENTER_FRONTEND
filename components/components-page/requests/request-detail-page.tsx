@@ -12,7 +12,9 @@ import {
   FileImage,
   FileSpreadsheet,
   FileText,
+  MailCheck,
   Paperclip,
+  RotateCcw,
   Trash2,
   UserRound,
   X,
@@ -204,6 +206,7 @@ export function RequestDetailPage() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [isSavingChanges, setIsSavingChanges] = React.useState(false);
+  const [isUpdatingResponse, setIsUpdatingResponse] = React.useState(false);
 
   const [request, setRequest] = React.useState<RequestItem | null>(null);
   const [statuses, setStatuses] = React.useState<RequestStatus[]>([]);
@@ -471,6 +474,46 @@ export function RequestDetailPage() {
     }
   };
 
+  const onMarkResponded = async () => {
+    if (!request) return;
+    const recipient = request.response_sent_to || request.requester_email || request.creator_email || "el destinatario";
+    const ok = await alerts.confirm(
+      "Confirmar envío",
+      `Confirma que la respuesta final fue enviada externamente a ${recipient}.`
+    );
+    if (!ok) return;
+
+    try {
+      setIsUpdatingResponse(true);
+      await boardApi.markFinalResponseSent(request.id);
+      const reqRes = await requestsApi.getById(request.id);
+      setRequest(reqRes.data);
+      await alerts.toastSuccess("Envío confirmado");
+    } catch (error: unknown) {
+      await alerts.error("No se pudo marcar la respuesta", getErrorMessage(error));
+    } finally {
+      setIsUpdatingResponse(false);
+    }
+  };
+
+  const onRevertResponse = async () => {
+    if (!request) return;
+    const ok = await alerts.confirm("Revertir respuesta", "La solicitud volvera a quedar pendiente de respuesta.");
+    if (!ok) return;
+
+    try {
+      setIsUpdatingResponse(true);
+      await boardApi.revertFinalResponse(request.id);
+      const reqRes = await requestsApi.getById(request.id);
+      setRequest(reqRes.data);
+      await alerts.toastSuccess("Respuesta revertida a pendiente");
+    } catch (error: unknown) {
+      await alerts.error("No se pudo revertir la respuesta", getErrorMessage(error));
+    } finally {
+      setIsUpdatingResponse(false);
+    }
+  };
+
   // ✅ NUEVO: eliminar solicitud (solo ADMIN)
   const onDelete = async () => {
     if (!canDeleteRequests || !request) return;
@@ -513,7 +556,7 @@ export function RequestDetailPage() {
   if (!request) return <div className="p-4 text-sm text-muted-foreground">No se encontró la solicitud.</div>;
 
   const { current, prev, next } = findPrevNext(statuses, request.status_id);
-  const isBusy = isDeleting || isSavingChanges;
+  const isBusy = isDeleting || isSavingChanges || isUpdatingResponse;
   const requesterFullName = [request.requester_first_name, request.requester_last_name].filter(Boolean).join(" ");
   const hasRequesterData = Boolean(request.requester_id || requesterFullName || request.requester_email || request.requester_phone);
   const hasPublicChannel = Boolean(request.requester_id && request.tracking_code);
@@ -798,6 +841,53 @@ export function RequestDetailPage() {
                 Solicitud interna sin solicitante externo asociado.
               </div>
             )}
+          </div>
+
+          <Separator />
+
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <MailCheck className="size-4" />
+              Respuesta final
+            </div>
+            <div className="rounded-xl border bg-muted/20 p-3 text-sm">
+              <div className="font-semibold">
+                {request.response_state === "SENT"
+                  ? request.response_delivery_channel === "SYSTEM_EMAIL"
+                    ? "Enviada por la plataforma"
+                    : "Respondida externamente"
+                  : request.response_state === "PENDING"
+                    ? "Pendiente de respuesta"
+                    : request.response_state === "UNCONFIRMED"
+                      ? "Sin confirmar"
+                      : request.response_state === "FAILED"
+                        ? "Error de envio"
+                        : request.response_state === "MISSING_RECIPIENT"
+                          ? "Falta destinatario"
+                          : "No aplica"}
+              </div>
+              <div className="mt-1 break-all text-xs text-muted-foreground">
+                Destinatario: {request.response_sent_to || request.requester_email || request.creator_email || "No disponible"}
+              </div>
+              {request.response_sent_at ? (
+                <div className="mt-1 text-xs text-muted-foreground">
+                  Confirmada: {formatDetailDate(request.response_sent_at)}
+                </div>
+              ) : null}
+            </div>
+
+            {request.is_terminal && ["PENDING", "UNCONFIRMED"].includes(request.response_state ?? "") ? (
+              <Button className="w-full" onClick={onMarkResponded} disabled={!canEdit || isBusy}>
+                <MailCheck className="mr-2 size-4" />
+                Confirmar envío
+              </Button>
+            ) : null}
+            {request.response_state === "SENT" ? (
+              <Button variant="outline" className="w-full" onClick={onRevertResponse} disabled={!canEdit || isBusy}>
+                <RotateCcw className="mr-2 size-4" />
+                Revertir a pendiente
+              </Button>
+            ) : null}
           </div>
 
           <Separator />
